@@ -30,7 +30,7 @@ builder.Services.AddHttpClient<CopilotApiClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["services:svgeditor-api:https:0"]
         ?? builder.Configuration["services:svgeditor-api:http:0"]
-        ?? "https://localhost:7001");
+        ?? "https://localhost:7079");
 });
 
 await builder.Build().RunAsync();

@@ -7,7 +7,7 @@ public sealed class EditorContextBuilder(EditorState editorState)
 {
     private int _version;
 
-    public string CurrentVersion => _version.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    public string CurrentVersion => Volatile.Read(ref _version).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public void IncrementVersion() => Interlocked.Increment(ref _version);
 
