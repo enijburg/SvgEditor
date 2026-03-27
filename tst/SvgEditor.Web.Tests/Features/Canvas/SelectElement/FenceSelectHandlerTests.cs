@@ -159,4 +159,17 @@ public sealed class FenceSelectHandlerTests
 
         Assert.IsNull(state.SelectedElementId);
     }
+
+    [TestMethod]
+    public async Task Handle_SelectsImageInFence()
+    {
+        var img = new SvgImage { Id = "img1", Attributes = new Dictionary<string, string> { ["x"] = "10", ["y"] = "10", ["width"] = "50", ["height"] = "40" } };
+        var state = CreateState(img);
+        var handler = new FenceSelectHandler(state);
+
+        await handler.Handle(new FenceSelectCommand(new BoundingBox(0, 0, 100, 100)));
+
+        Assert.HasCount(1, state.SelectedElementIds);
+        Assert.Contains("img1", state.SelectedElementIds);
+    }
 }

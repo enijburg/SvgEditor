@@ -1,0 +1,44 @@
+namespace SvgEditor.Web.Features.Canvas.Models;
+
+public sealed class SvgImage : SvgElement
+{
+    public override string Tag => "image";
+
+    public double X
+    {
+        get => ParseDouble(Attributes.GetValueOrDefault("x"));
+        init => Attributes["x"] = FormatDouble(value);
+    }
+
+    public double Y
+    {
+        get => ParseDouble(Attributes.GetValueOrDefault("y"));
+        init => Attributes["y"] = FormatDouble(value);
+    }
+
+    public double Width
+    {
+        get => ParseDouble(Attributes.GetValueOrDefault("width"));
+        init => Attributes["width"] = FormatDouble(value);
+    }
+
+    public double Height
+    {
+        get => ParseDouble(Attributes.GetValueOrDefault("height"));
+        init => Attributes["height"] = FormatDouble(value);
+    }
+
+    public override SvgElement WithOffset(double dx, double dy)
+    {
+        var attrs = new Dictionary<string, string>(Attributes)
+        {
+            ["x"] = FormatDouble(X + dx),
+            ["y"] = FormatDouble(Y + dy)
+        };
+        return new SvgImage { Id = Id, Attributes = attrs };
+    }
+
+    public override SvgElement DeepClone() => new SvgImage { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
+
+    public override BoundingBox? GetBoundingBox() => new BoundingBox(X, Y, Width, Height);
+}

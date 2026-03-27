@@ -40,6 +40,10 @@ else if (Element is SvgPath)
     <path @attributes="GetHitAreaAttributes(Element)" />
     <path @attributes="GetAttributes(Element)" />
 }
+else if (Element is SvgImage)
+{
+    <image @attributes="GetAttributes(Element)" />
+}
 else if (Element is SvgText textEl)
 {
     @((MarkupString)RenderSvgText(textEl))
