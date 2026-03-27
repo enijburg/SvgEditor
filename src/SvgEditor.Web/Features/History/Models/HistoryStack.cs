@@ -20,7 +20,7 @@ public sealed class HistoryStack
     {
         if (!CanUndo) return null;
         var entry = _undoStack.Pop();
-        _redoStack.Push(new HistoryEntry(entry.Description, current));
+        _redoStack.Push(new HistoryEntry(entry.Description, current.DeepClone()));
         return entry.Snapshot;
     }
 
@@ -28,7 +28,7 @@ public sealed class HistoryStack
     {
         if (!CanRedo) return null;
         var entry = _redoStack.Pop();
-        _undoStack.Push(new HistoryEntry(entry.Description, current));
+        _undoStack.Push(new HistoryEntry(entry.Description, current.DeepClone()));
         return entry.Snapshot;
     }
 
