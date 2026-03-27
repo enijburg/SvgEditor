@@ -41,4 +41,13 @@ public sealed class SvgLine : SvgElement
     }
 
     public override SvgElement DeepClone() => new SvgLine { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
+
+    public override BoundingBox? GetBoundingBox()
+    {
+        var minX = Math.Min(X1, X2);
+        var minY = Math.Min(Y1, Y2);
+        var maxX = Math.Max(X1, X2);
+        var maxY = Math.Max(Y1, Y2);
+        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
+    }
 }

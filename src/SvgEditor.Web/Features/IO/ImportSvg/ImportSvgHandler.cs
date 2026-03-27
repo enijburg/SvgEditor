@@ -65,6 +65,7 @@ public sealed class ImportSvgHandler : IRequestHandler<ImportSvgCommand, SvgDocu
             "polyline" => new SvgPolyline { Id = id, Attributes = attrs },
             "polygon" => new SvgPolygon { Id = id, Attributes = attrs },
             "path" => new SvgPath { Id = id, Attributes = attrs },
+            "image" => new SvgImage { Id = id, Attributes = attrs },
             "text" => new SvgText
             {
                 Id = id,

@@ -100,4 +100,42 @@ public sealed class SvgElementTests
         Assert.AreEqual(10, movedRect.X);
         Assert.AreEqual(60, movedCircle.Cx);
     }
+
+    [TestMethod]
+    public void SvgImage_WithOffset_UpdatesXAndY()
+    {
+        var image = new SvgImage { Attributes = new Dictionary<string, string> { ["x"] = "10", ["y"] = "20", ["width"] = "100", ["height"] = "80" } };
+
+        var moved = (SvgImage)image.WithOffset(5, -3);
+
+        Assert.AreEqual(15, moved.X);
+        Assert.AreEqual(17, moved.Y);
+        Assert.AreEqual(100, moved.Width);
+        Assert.AreEqual(80, moved.Height);
+    }
+
+    [TestMethod]
+    public void SvgImage_GetBoundingBox_ReturnsCorrectBox()
+    {
+        var image = new SvgImage { Attributes = new Dictionary<string, string> { ["x"] = "10", ["y"] = "20", ["width"] = "100", ["height"] = "80" } };
+
+        var bb = image.GetBoundingBox();
+
+        Assert.IsNotNull(bb);
+        Assert.AreEqual(10, bb.X);
+        Assert.AreEqual(20, bb.Y);
+        Assert.AreEqual(100, bb.Width);
+        Assert.AreEqual(80, bb.Height);
+    }
+
+    [TestMethod]
+    public void SvgImage_DeepClone_IsIndependent()
+    {
+        var image = new SvgImage { Attributes = new Dictionary<string, string> { ["x"] = "10", ["href"] = "data:image/png;base64,abc" } };
+
+        var clone = (SvgImage)image.DeepClone();
+        clone.Attributes["x"] = "999";
+
+        Assert.AreEqual("10", image.Attributes["x"]);
+    }
 }

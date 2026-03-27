@@ -1,8 +1,8 @@
 namespace SvgEditor.Web.Features.Canvas.Models;
 
-public sealed class SvgRect : SvgElement
+public sealed class SvgImage : SvgElement
 {
-    public override string Tag => "rect";
+    public override string Tag => "image";
 
     public double X
     {
@@ -28,18 +28,6 @@ public sealed class SvgRect : SvgElement
         init => Attributes["height"] = FormatDouble(value);
     }
 
-    public double Rx
-    {
-        get => ParseDouble(Attributes.GetValueOrDefault("rx"));
-        init => Attributes["rx"] = FormatDouble(value);
-    }
-
-    public double Ry
-    {
-        get => ParseDouble(Attributes.GetValueOrDefault("ry"));
-        init => Attributes["ry"] = FormatDouble(value);
-    }
-
     public override SvgElement WithOffset(double dx, double dy)
     {
         var attrs = new Dictionary<string, string>(Attributes)
@@ -47,10 +35,10 @@ public sealed class SvgRect : SvgElement
             ["x"] = FormatDouble(X + dx),
             ["y"] = FormatDouble(Y + dy)
         };
-        return new SvgRect { Id = Id, Attributes = attrs };
+        return new SvgImage { Id = Id, Attributes = attrs };
     }
 
-    public override SvgElement DeepClone() => new SvgRect { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
+    public override SvgElement DeepClone() => new SvgImage { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
     public override BoundingBox? GetBoundingBox() => new BoundingBox(X, Y, Width, Height);
 }

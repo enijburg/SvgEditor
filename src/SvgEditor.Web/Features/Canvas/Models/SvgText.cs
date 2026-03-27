@@ -29,4 +29,7 @@ public sealed class SvgText : SvgElement
     }
 
     public override SvgElement DeepClone() => new SvgText { Id = Id, Attributes = new Dictionary<string, string>(Attributes), Content = Content };
+
+    // Approximate bounding box: 8px per character width, 16px line height (rough estimate for default font size)
+    public override BoundingBox? GetBoundingBox() => new BoundingBox(X, Y - 16, Content.Length * 8, 16);
 }

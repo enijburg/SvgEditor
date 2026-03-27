@@ -15,6 +15,8 @@ public sealed class SvgPolyline : SvgElement
 
     public override SvgElement DeepClone() => new SvgPolyline { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
+    public override BoundingBox? GetBoundingBox() => SvgPolygon.ComputePointsBoundingBox(Points);
+
     private static string TranslatePoints(string points, double dx, double dy)
     {
         var pairs = points.Trim().Split([' ', ','], StringSplitOptions.RemoveEmptyEntries);

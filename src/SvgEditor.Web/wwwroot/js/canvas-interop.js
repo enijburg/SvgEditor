@@ -2,6 +2,7 @@ window.svgEditorCanvas = (function () {
     let dotNetRef = null;
     let svgElement = null;
     let isDragging = false;
+    let isFencing = false;
     let lastSvgPoint = null;
 
     function getSvgPoint(evt) {
@@ -25,31 +26,50 @@ window.svgEditorCanvas = (function () {
         const elementId = target && target !== svgElement
             ? target.getAttribute('data-element-id')
             : null;
-        if (!elementId) return;
-        evt.preventDefault();
-        isDragging = true;
+
         lastSvgPoint = getSvgPoint(evt);
-        dotNetRef.invokeMethodAsync('OnElementMouseDown', elementId,
-            lastSvgPoint ? lastSvgPoint.x : 0,
-            lastSvgPoint ? lastSvgPoint.y : 0);
+        const ctrlKey = evt.ctrlKey || evt.metaKey;
+
+        if (elementId && !ctrlKey) {
+            evt.preventDefault();
+            isDragging = true;
+            isFencing = false;
+            dotNetRef.invokeMethodAsync('OnElementMouseDown', elementId,
+                lastSvgPoint ? lastSvgPoint.x : 0,
+                lastSvgPoint ? lastSvgPoint.y : 0,
+                ctrlKey);
+        } else if (elementId || target === svgElement || target === evt.target) {
+            evt.preventDefault();
+            isDragging = false;
+            isFencing = true;
+            dotNetRef.invokeMethodAsync('OnCanvasMouseDown',
+                lastSvgPoint ? lastSvgPoint.x : 0,
+                lastSvgPoint ? lastSvgPoint.y : 0,
+                ctrlKey);
+        }
     }
 
     function onMouseMove(evt) {
-        if (!isDragging || !lastSvgPoint) return;
+        if (!isDragging && !isFencing) return;
+        if (!lastSvgPoint) return;
         evt.preventDefault();
         const pt = getSvgPoint(evt);
         if (!pt) return;
         const dx = pt.x - lastSvgPoint.x;
         const dy = pt.y - lastSvgPoint.y;
         lastSvgPoint = pt;
-        dotNetRef.invokeMethodAsync('OnMouseMove', dx, dy);
+        dotNetRef.invokeMethodAsync('OnMouseMove', dx, dy, pt.x, pt.y);
     }
 
     function onMouseUp(evt) {
-        if (!isDragging) return;
+        if (!isDragging && !isFencing) return;
+        const pt = getSvgPoint(evt);
         isDragging = false;
+        isFencing = false;
         lastSvgPoint = null;
-        dotNetRef.invokeMethodAsync('OnMouseUp');
+        dotNetRef.invokeMethodAsync('OnMouseUp',
+            pt ? pt.x : 0,
+            pt ? pt.y : 0);
     }
 
     return {
@@ -69,6 +89,7 @@ window.svgEditorCanvas = (function () {
             window.removeEventListener('mouseup', onMouseUp);
             dotNetRef = null;
             isDragging = false;
+            isFencing = false;
             lastSvgPoint = null;
         }
     };
