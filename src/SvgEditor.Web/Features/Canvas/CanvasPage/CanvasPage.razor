@@ -4,6 +4,7 @@
 @using SvgEditor.Web.Features.Canvas.SelectElement
 @using SvgEditor.Web.Features.Canvas.UpdateElement
 @using SvgEditor.Web.Features.History.PushHistory
+@using SvgEditor.Web.Features.History.UndoRedo
 @using SvgEditor.Web.Shared.Mediator
 @using SvgEditor.Web.Shared.Storage
 @implements IAsyncDisposable
@@ -207,6 +208,20 @@
         _dragElementId = null;
         _isFencing = false;
         _fenceRect = null;
+    }
+
+    [JSInvokable]
+    public async Task OnKeyDown(string action)
+    {
+        switch (action)
+        {
+            case "undo":
+                await Mediator.Send(new UndoCommand());
+                break;
+            case "redo":
+                await Mediator.Send(new RedoCommand());
+                break;
+        }
     }
 
     public async ValueTask DisposeAsync()

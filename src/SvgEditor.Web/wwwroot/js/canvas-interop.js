@@ -72,6 +72,20 @@ window.svgEditorCanvas = (function () {
             pt ? pt.y : 0);
     }
 
+    function onKeyDown(evt) {
+        if (!dotNetRef) return;
+        var tag = evt.target && evt.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (evt.target && evt.target.isContentEditable)) return;
+        var ctrl = evt.ctrlKey || evt.metaKey;
+        if (ctrl && evt.key === 'z' && !evt.shiftKey) {
+            evt.preventDefault();
+            dotNetRef.invokeMethodAsync('OnKeyDown', 'undo');
+        } else if (ctrl && (evt.key === 'y' || (evt.key === 'z' && evt.shiftKey))) {
+            evt.preventDefault();
+            dotNetRef.invokeMethodAsync('OnKeyDown', 'redo');
+        }
+    }
+
     return {
         initCanvas: function (ref, svg) {
             dotNetRef = ref;
@@ -79,6 +93,7 @@ window.svgEditorCanvas = (function () {
             svg.addEventListener('mousedown', onMouseDown);
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('mouseup', onMouseUp);
+            window.addEventListener('keydown', onKeyDown);
         },
         dispose: function () {
             if (svgElement) {
@@ -87,6 +102,7 @@ window.svgEditorCanvas = (function () {
             }
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
+            window.removeEventListener('keydown', onKeyDown);
             dotNetRef = null;
             isDragging = false;
             isFencing = false;
