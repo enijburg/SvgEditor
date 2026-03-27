@@ -126,19 +126,32 @@
     public async Task OnElementMouseDown(string elementId, double svgX, double svgY, bool ctrlKey)
     {
         _historyPushed = false;
-        _isFencing = false;
-        _fenceRect = null;
 
         await Mediator.Send(new SelectElementCommand(elementId, ctrlKey));
 
-        // If this element is in the selection, enable dragging all selected elements
-        if (EditorState.SelectedElementIds.Contains(elementId))
+        if (ctrlKey)
         {
-            _dragElementId = elementId;
+            // Ctrl+click: toggle done above, start fencing for potential drag-to-select
+            _dragElementId = null;
+            _isFencing = true;
+            _fenceStartX = svgX;
+            _fenceStartY = svgY;
+            _fenceRect = (svgX, svgY, 0, 0);
         }
         else
         {
-            _dragElementId = null;
+            _isFencing = false;
+            _fenceRect = null;
+
+            // If this element is in the selection, enable dragging all selected elements
+            if (EditorState.SelectedElementIds.Contains(elementId))
+            {
+                _dragElementId = elementId;
+            }
+            else
+            {
+                _dragElementId = null;
+            }
         }
     }
 

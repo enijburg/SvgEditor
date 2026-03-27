@@ -30,10 +30,19 @@ window.svgEditorCanvas = (function () {
         lastSvgPoint = getSvgPoint(evt);
         const ctrlKey = evt.ctrlKey || evt.metaKey;
 
-        if (elementId) {
+        if (elementId && !ctrlKey) {
             evt.preventDefault();
             isDragging = true;
             isFencing = false;
+            dotNetRef.invokeMethodAsync('OnElementMouseDown', elementId,
+                lastSvgPoint ? lastSvgPoint.x : 0,
+                lastSvgPoint ? lastSvgPoint.y : 0,
+                ctrlKey);
+        } else if (elementId) {
+            // Ctrl+click on element: toggle selection and start potential fence
+            evt.preventDefault();
+            isDragging = false;
+            isFencing = true;
             dotNetRef.invokeMethodAsync('OnElementMouseDown', elementId,
                 lastSvgPoint ? lastSvgPoint.x : 0,
                 lastSvgPoint ? lastSvgPoint.y : 0,
