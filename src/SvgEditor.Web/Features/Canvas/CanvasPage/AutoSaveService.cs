@@ -26,6 +26,8 @@ public sealed class AutoSaveService : IDisposable
         _debounceTimer = new Timer(SaveCallback, null, DebounceMs, Timeout.Infinite);
     }
 
+    // async void is required for Timer callback compatibility.
+    // The try-catch ensures unhandled exceptions do not crash the application.
     private async void SaveCallback(object? state)
     {
         try

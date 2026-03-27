@@ -42,9 +42,9 @@
 @code {
     private ElementReference _svgRef;
     private DotNetObjectReference<CanvasPage>? _dotNetRef;
-    private bool _dragging;
+    private bool _historyPushed;
     private string? _dragElementId;
-    private bool _firstRender = true;
+    private bool _canvasInitialized;
 
     protected override async Task OnInitializedAsync()
     {
@@ -67,42 +67,31 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_firstRender && EditorState.Document is not null)
+        if (!_canvasInitialized && EditorState.Document is not null)
         {
-            _firstRender = false;
             await InitCanvas();
         }
     }
 
     private async Task InitCanvas()
     {
-        if (_dotNetRef is not null) return;
+        if (_canvasInitialized) return;
+        _canvasInitialized = true;
         _dotNetRef = DotNetObjectReference.Create(this);
         await JSRuntime.InvokeVoidAsync("svgEditorCanvas.initCanvas", _dotNetRef, _svgRef);
     }
 
     private void OnEditorStateChanged()
     {
-        InvokeAsync(async () =>
-        {
-            StateHasChanged();
-            // Re-init canvas if document just appeared
-            if (_firstRender && EditorState.Document is not null)
-            {
-                _firstRender = false;
-                await Task.Delay(50); // allow render cycle
-                await InitCanvas();
-            }
-        });
+        InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
     public async Task OnElementMouseDown(string elementId, double svgX, double svgY)
     {
-        _dragging = false;
+        _historyPushed = false;
         _dragElementId = elementId;
 
-        await Mediator.Send(new PushHistoryCommand("Move element"));
         await Mediator.Send(new SelectElementCommand(elementId));
     }
 
@@ -110,18 +99,21 @@
     public async Task OnMouseMove(double dx, double dy)
     {
         if (_dragElementId is null) return;
-        _dragging = true;
+
+        // Push history snapshot once, before the first move
+        if (!_historyPushed)
+        {
+            _historyPushed = true;
+            await Mediator.Send(new PushHistoryCommand("Move element"));
+        }
+
         await Mediator.Send(new UpdateElementCommand(_dragElementId, dx, dy));
     }
 
     [JSInvokable]
     public Task OnMouseUp()
     {
-        if (!_dragging && _dragElementId is not null)
-        {
-            // It was a click (no movement) — keep selection, pop last history entry
-        }
-        _dragging = false;
+        _historyPushed = false;
         _dragElementId = null;
         return Task.CompletedTask;
     }
