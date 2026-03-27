@@ -17,13 +17,15 @@ public sealed class SelectElementHandler(EditorState editorState) : IRequestHand
         {
             // Ctrl+click — toggle element in selection
             var ids = new HashSet<string>(editorState.SelectedElementIds);
-            if (!ids.Remove(request.ElementId))
+            var added = ids.Add(request.ElementId);
+            if (!added)
             {
-                ids.Add(request.ElementId);
+                ids.Remove(request.ElementId);
             }
 
             editorState.SelectedElementIds = ids;
-            editorState.SelectedElementId = ids.Count > 0 ? request.ElementId : null;
+            editorState.SelectedElementId = added ? request.ElementId
+                : ids.Count > 0 ? ids.First() : null;
         }
         else
         {

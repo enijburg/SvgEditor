@@ -65,6 +65,7 @@ public sealed class SelectElementHandlerTests
         Assert.HasCount(1, state.SelectedElementIds);
         Assert.Contains("r2", state.SelectedElementIds);
         Assert.DoesNotContain("r1", state.SelectedElementIds);
+        Assert.AreEqual("r2", state.SelectedElementId);
     }
 
     [TestMethod]

@@ -197,6 +197,7 @@
     [JSInvokable]
     public async Task OnMouseUp(double svgX, double svgY)
     {
+        // Require minimum 2px fence size to avoid accidental selection from small mouse movements during clicks
         if (_isFencing && _fenceRect is var (x, y, w, h) && (w > 2 || h > 2))
         {
             await Mediator.Send(new FenceSelectCommand(new BoundingBox(x, y, w, h)));
