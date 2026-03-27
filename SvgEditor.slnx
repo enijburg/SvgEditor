@@ -1,6 +1,9 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/SvgEditor.Web/SvgEditor.Web.csproj" />
+    <Project Path="src/SvgEditor.Api/SvgEditor.Api.csproj" />
+    <Project Path="src/SvgEditor.AppHost/SvgEditor.AppHost.csproj" />
+    <Project Path="src/SvgEditor.ServiceDefaults/SvgEditor.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/tst/">
     <Project Path="tst/SvgEditor.Web.Tests/SvgEditor.Web.Tests.csproj" />
