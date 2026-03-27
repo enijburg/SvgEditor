@@ -30,7 +30,7 @@ window.svgEditorCanvas = (function () {
         lastSvgPoint = getSvgPoint(evt);
         const ctrlKey = evt.ctrlKey || evt.metaKey;
 
-        if (elementId) {
+        if (elementId && !ctrlKey) {
             evt.preventDefault();
             isDragging = true;
             isFencing = false;
@@ -38,7 +38,7 @@ window.svgEditorCanvas = (function () {
                 lastSvgPoint ? lastSvgPoint.x : 0,
                 lastSvgPoint ? lastSvgPoint.y : 0,
                 ctrlKey);
-        } else if (target === svgElement || target === evt.target) {
+        } else if (elementId || target === svgElement || target === evt.target) {
             evt.preventDefault();
             isDragging = false;
             isFencing = true;
