@@ -3,6 +3,7 @@
 @using SvgEditor.Web.Features.IO.ExportSvg
 @using SvgEditor.Web.Features.History.UndoRedo
 @using SvgEditor.Web.Features.History.Models
+@using SvgEditor.Web.Features.Styling.StylePanel
 @using SvgEditor.Web.Shared.Mediator
 @implements IDisposable
 @inject IMediator Mediator
@@ -24,6 +25,7 @@
     <button class="btn btn-sm btn-secondary" @onclick="Redo" disabled="@(!HistoryStack.CanRedo)" title="Redo">
         ↪ Redo
     </button>
+    <StylePanel />
 </div>
 
 @code {
