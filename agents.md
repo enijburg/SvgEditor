@@ -150,14 +150,29 @@ SvgEditor/
 
 ---
 
-## 9. Architecture Decision Records
+## 9. No Sample / Template Code
+
+The project must not contain default Blazor template boilerplate. When scaffolding or resetting
+the project, remove the following immediately:
+
+- **Sample pages**: `Counter.razor`, `Weather.razor`, `Home.razor` (in `Pages/`)
+- **Sample data**: `wwwroot/sample-data/` directory (e.g. `weather.json`)
+- **Placeholder tests**: `Test1.cs` or any empty test stubs
+- **Template nav links**: remove Counter, Weather, and any other sample entries from `NavMenu.razor`
+- **Template chrome**: remove the "About" link in `MainLayout.razor` top row
+
+Only application-specific pages, components, and test files should exist in the repository.
+
+---
+
+## 10. Architecture Decision Records
 
 Every significant architectural decision must have a corresponding ADR in `docs/adr/`.  
 Format: `ADR-NNN-short-title.md`. Template in `docs/adr/ADR-000-template.md`.
 
 ---
 
-## 10. Contribution Checklist (for agents)
+## 11. Contribution Checklist (for agents)
 
 Before submitting any change:
 
