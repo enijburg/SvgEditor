@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SvgEditor.Web/SvgEditor.Web.csproj" />
+  </Folder>
+  <Folder Name="/tst/">
+    <Project Path="tst/SvgEditor.Web.Tests/SvgEditor.Web.Tests.csproj" />
+  </Folder>
+</Solution>
