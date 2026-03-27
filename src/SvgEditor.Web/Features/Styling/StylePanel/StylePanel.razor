@@ -38,9 +38,10 @@
         if (element is null)
             return "#000000";
 
-        var fill = element.Attributes.GetValueOrDefault("fill", "#000000");
+        var attr = element.GetForegroundColorAttribute();
+        var color = element.Attributes.GetValueOrDefault(attr, "#000000");
 
-        return NormalizeToHex(fill);
+        return NormalizeToHex(color);
     }
 
     /// <summary>

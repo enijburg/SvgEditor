@@ -83,4 +83,31 @@ public sealed class UpdateFillColorHandlerTests
 
         Assert.IsTrue(notified);
     }
+
+    [TestMethod]
+    public async Task Handle_UpdatesStrokeOnLine()
+    {
+        var line = new SvgLine { Id = "l1", Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100", ["stroke"] = "#000000" } };
+        var state = CreateState(line);
+        var handler = new UpdateFillColorHandler(state);
+
+        await handler.Handle(new UpdateFillColorCommand(["l1"], "#ff0000"));
+
+        var updated = state.Document!.FindById("l1")!;
+        Assert.AreEqual("#ff0000", updated.Attributes["stroke"]);
+    }
+
+    [TestMethod]
+    public async Task Handle_UpdatesStrokeOnPathWithFillNone()
+    {
+        var path = new SvgPath { Id = "p1", Attributes = new Dictionary<string, string> { ["d"] = "M0 0 L100 100", ["fill"] = "none", ["stroke"] = "#0000ff" } };
+        var state = CreateState(path);
+        var handler = new UpdateFillColorHandler(state);
+
+        await handler.Handle(new UpdateFillColorCommand(["p1"], "#00ff00"));
+
+        var updated = state.Document!.FindById("p1")!;
+        Assert.AreEqual("#00ff00", updated.Attributes["stroke"]);
+        Assert.AreEqual("none", updated.Attributes["fill"]);
+    }
 }

@@ -15,7 +15,8 @@ public sealed class UpdateFillColorHandler(EditorState editorState) : IRequestHa
             var element = editorState.Document.FindById(elementId)
                 ?? throw new InvalidOperationException($"Element '{elementId}' not found.");
 
-            element.Attributes["fill"] = request.Color;
+            var attr = element.GetForegroundColorAttribute();
+            element.Attributes[attr] = request.Color;
         }
 
         editorState.NotifyStateChanged();
