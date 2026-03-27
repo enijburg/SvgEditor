@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Projects Include="..\SvgEditor.Api\SvgEditor.Api.csproj" />
-    <Projects Include="..\SvgEditor.Web\SvgEditor.Web.csproj" />
+    <ProjectReference Include="..\SvgEditor.Api\SvgEditor.Api.csproj" />
+    <ProjectReference Include="..\SvgEditor.Web\SvgEditor.Web.csproj" />
   </ItemGroup>
 
 </Project>
