@@ -14,8 +14,17 @@ window.svgEditorCanvas = (function () {
     }
 
     function onMouseDown(evt) {
-        const target = evt.target;
-        const elementId = target.getAttribute('data-element-id');
+        let target = evt.target;
+        // Walk up from the click target to find the nearest element with a data-element-id.
+        // Elements inside raw markup (e.g. <defs> children) won't have one,
+        // so we skip them until we reach a managed element or the SVG root.
+        while (target && target !== svgElement) {
+            if (target.getAttribute && target.getAttribute('data-element-id')) break;
+            target = target.parentElement;
+        }
+        const elementId = target && target !== svgElement
+            ? target.getAttribute('data-element-id')
+            : null;
         if (!elementId) return;
         evt.preventDefault();
         isDragging = true;

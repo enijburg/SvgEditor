@@ -55,6 +55,21 @@ public sealed class ExportSvgHandler : IRequestHandler<ExportSvgCommand, string>
                 el.Add(ElementToXml(child));
             }
         }
+        else if (element is SvgUnknown unknown && !string.IsNullOrEmpty(unknown.InnerXml))
+        {
+            try
+            {
+                var wrapper = XElement.Parse($"<wrapper xmlns='{SvgNs}'>{unknown.InnerXml}</wrapper>");
+                foreach (var node in wrapper.Nodes())
+                {
+                    el.Add(node);
+                }
+            }
+            catch
+            {
+                // If inner XML can't be re-parsed, skip children
+            }
+        }
 
         return el;
     }

@@ -81,7 +81,12 @@ public sealed class ImportSvgHandler : IRequestHandler<ImportSvgCommand, SvgDocu
                     .Select(e => e!)
                     .ToList()
             },
-            _ => new SvgUnknown(localName) { Id = id, Attributes = attrs }
+            _ => new SvgUnknown(localName)
+            {
+                Id = id,
+                Attributes = attrs,
+                InnerXml = string.Concat(el.Nodes().Select(n => n.ToString()))
+            }
         };
     }
 }

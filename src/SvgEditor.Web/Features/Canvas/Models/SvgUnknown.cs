@@ -1,21 +1,25 @@
 namespace SvgEditor.Web.Features.Canvas.Models;
 
-public sealed class SvgUnknown : SvgElement
+public sealed class SvgUnknown(string tag) : SvgElement
 {
-    private readonly string _tag;
-    public override string Tag => _tag;
+    public override string Tag => tag;
 
-    public SvgUnknown(string tag)
-    {
-        _tag = tag;
-    }
+    /// <summary>
+    /// Raw inner XML content preserved from import (e.g., children of &lt;defs&gt;).
+    /// </summary>
+    public string InnerXml { get; init; } = "";
 
     public override SvgElement WithOffset(double dx, double dy)
     {
         var attrs = new Dictionary<string, string>(Attributes);
         SvgPath.ApplyTranslation(attrs, dx, dy);
-        return new SvgUnknown(_tag) { Id = Id, Attributes = attrs };
+        return new SvgUnknown(tag) { Id = Id, Attributes = attrs, InnerXml = InnerXml };
     }
 
-    public override SvgElement DeepClone() => new SvgUnknown(_tag) { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
+    public override SvgElement DeepClone() => new SvgUnknown(tag)
+    {
+        Id = Id,
+        Attributes = new Dictionary<string, string>(Attributes),
+        InnerXml = InnerXml
+    };
 }
