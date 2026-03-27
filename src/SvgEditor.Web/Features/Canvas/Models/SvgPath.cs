@@ -70,7 +70,25 @@ public sealed class SvgPath : SvgElement
             found = true;
         }
 
-        return found ? new BoundingBox(minX, minY, maxX - minX, maxY - minY) : null;
+        if (!found) return null;
+
+        var (tx, ty) = ParseTranslation();
+        return new BoundingBox(minX + tx, minY + ty, maxX - minX, maxY - minY);
+    }
+
+    private (double Tx, double Ty) ParseTranslation()
+    {
+        if (!Attributes.TryGetValue("transform", out var transform) ||
+            !transform.StartsWith("translate(", StringComparison.Ordinal))
+            return (0, 0);
+
+        var inner = transform["translate(".Length..^1];
+        var parts = inner.Split(',');
+        var tx = double.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var v1) ? v1 : 0;
+        var ty = parts.Length > 1 && double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var v2) ? v2 : 0;
+        return (tx, ty);
     }
 
     internal static void ApplyTranslation(Dictionary<string, string> attrs, double dx, double dy)

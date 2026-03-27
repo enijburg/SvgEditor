@@ -128,4 +128,29 @@ public sealed class BoundingBoxTests
         var path = new SvgPath { Attributes = new Dictionary<string, string> { ["d"] = "" } };
         Assert.IsNull(path.GetBoundingBox());
     }
+
+    [TestMethod]
+    public void Path_WithTranslateTransform_AccountsForOffset()
+    {
+        var path = new SvgPath { Attributes = new Dictionary<string, string> { ["d"] = "M 0 0 L 100 100", ["transform"] = "translate(50,30)" } };
+        var bb = path.GetBoundingBox();
+        Assert.IsNotNull(bb);
+        Assert.AreEqual(50, bb.X);
+        Assert.AreEqual(30, bb.Y);
+        Assert.AreEqual(100, bb.Width);
+        Assert.AreEqual(100, bb.Height);
+    }
+
+    [TestMethod]
+    public void Path_AfterWithOffset_BoundingBoxReflectsMovement()
+    {
+        var path = new SvgPath { Attributes = new Dictionary<string, string> { ["d"] = "M 10 20 L 100 80" } };
+        var moved = (SvgPath)path.WithOffset(50, 30);
+        var bb = moved.GetBoundingBox();
+        Assert.IsNotNull(bb);
+        Assert.AreEqual(60, bb.X);
+        Assert.AreEqual(50, bb.Y);
+        Assert.AreEqual(90, bb.Width);
+        Assert.AreEqual(60, bb.Height);
+    }
 }
