@@ -1,0 +1,163 @@
+.copilot-panel {
+    padding: 12px;
+    border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+    font-size: 0.875rem;
+}
+
+.copilot-title {
+    margin: 0 0 8px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.copilot-input-area {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.copilot-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    outline: none;
+}
+
+.copilot-input:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.copilot-send-btn {
+    padding: 6px 14px;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.copilot-send-btn:hover:not(:disabled) {
+    background: #0b5ed7;
+}
+
+.copilot-send-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.copilot-error {
+    padding: 8px;
+    margin-bottom: 8px;
+    background: #f8d7da;
+    color: #842029;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.copilot-plan {
+    padding: 8px;
+    margin-bottom: 8px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.copilot-summary {
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.copilot-commands {
+    margin-bottom: 6px;
+}
+
+.copilot-command {
+    padding: 4px 8px;
+    margin-bottom: 2px;
+    background: #e9ecef;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+
+.command-type {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+.command-target {
+    color: #6c757d;
+    margin-left: 4px;
+}
+
+.copilot-validation-errors {
+    margin-bottom: 6px;
+}
+
+.validation-issue {
+    padding: 4px;
+    color: #842029;
+    font-size: 0.8rem;
+}
+
+.copilot-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.copilot-apply-btn {
+    padding: 5px 12px;
+    background: #198754;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.copilot-apply-btn:hover:not(:disabled) {
+    background: #157347;
+}
+
+.copilot-apply-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.copilot-dismiss-btn {
+    padding: 5px 12px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.copilot-dismiss-btn:hover {
+    background: #5c636a;
+}
+
+.copilot-result {
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.copilot-result.success {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.copilot-result.failure {
+    background: #f8d7da;
+    color: #842029;
+}
