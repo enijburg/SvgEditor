@@ -14,7 +14,7 @@ public sealed class FenceSelectHandler(EditorState editorState) : IRequestHandle
 
         var fence = request.Fence;
         var ids = new HashSet<string>();
-        CollectIntersecting(editorState.Document.Elements, fence, ids);
+        CollectSelected(editorState.Document.Elements, fence, ids);
 
         editorState.SelectedElementIds = ids;
         editorState.SelectedElementId = ids.Count == 1 ? ids.First() : null;
@@ -23,27 +23,41 @@ public sealed class FenceSelectHandler(EditorState editorState) : IRequestHandle
         return Task.FromResult(Unit.Value);
     }
 
-    private static void CollectIntersecting(List<SvgElement> elements, BoundingBox fence, HashSet<string> ids)
+    private static void CollectSelected(List<SvgElement> elements, BoundingBox fence, HashSet<string> ids)
     {
         foreach (var element in elements)
         {
             if (element is SvgGroup group)
             {
-                CollectIntersecting(group.Children, fence, ids);
+                CollectSelected(group.Children, fence, ids);
                 continue;
             }
 
-            var bb = element.GetBoundingBox();
-            if (bb is not null && Intersects(fence, bb))
+            if (IsSelectedByFence(element, fence))
             {
                 ids.Add(element.Id);
             }
         }
     }
 
-    public static bool Intersects(BoundingBox fence, BoundingBox element) =>
-        fence.X < element.X + element.Width &&
-        fence.X + fence.Width > element.X &&
-        fence.Y < element.Y + element.Height &&
-        fence.Y + fence.Height > element.Y;
+    internal static bool IsSelectedByFence(SvgElement element, BoundingBox fence)
+    {
+        if (element is SvgText text)
+        {
+            return ContainsPoint(fence, text.X, text.Y);
+        }
+
+        var bb = element.GetBoundingBox();
+        return bb is not null && Contains(fence, bb);
+    }
+
+    public static bool Contains(BoundingBox fence, BoundingBox element) =>
+        fence.X <= element.X &&
+        fence.Y <= element.Y &&
+        fence.X + fence.Width >= element.X + element.Width &&
+        fence.Y + fence.Height >= element.Y + element.Height;
+
+    public static bool ContainsPoint(BoundingBox fence, double x, double y) =>
+        x >= fence.X && x <= fence.X + fence.Width &&
+        y >= fence.Y && y <= fence.Y + fence.Height;
 }

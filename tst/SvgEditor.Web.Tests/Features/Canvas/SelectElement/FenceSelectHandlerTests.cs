@@ -91,49 +91,48 @@ public sealed class FenceSelectHandlerTests
     }
 
     [TestMethod]
-    public void Intersects_ReturnsTrue_WhenFullyContained()
+    public void Contains_ReturnsTrue_WhenFullyContained()
     {
-        Assert.IsTrue(FenceSelectHandler.Intersects(
+        Assert.IsTrue(FenceSelectHandler.Contains(
             new BoundingBox(0, 0, 100, 100),
             new BoundingBox(10, 10, 20, 20)));
     }
 
     [TestMethod]
-    public void Intersects_ReturnsFalse_WhenNotOverlapping()
+    public void Contains_ReturnsFalse_WhenNotOverlapping()
     {
-        Assert.IsFalse(FenceSelectHandler.Intersects(
+        Assert.IsFalse(FenceSelectHandler.Contains(
             new BoundingBox(0, 0, 10, 10),
             new BoundingBox(20, 20, 10, 10)));
     }
 
     [TestMethod]
-    public void Intersects_ReturnsTrue_WhenPartiallyOverlapping()
+    public void Contains_ReturnsFalse_WhenPartiallyOverlapping()
     {
-        Assert.IsTrue(FenceSelectHandler.Intersects(
+        Assert.IsFalse(FenceSelectHandler.Contains(
             new BoundingBox(0, 0, 50, 50),
             new BoundingBox(25, 25, 50, 50)));
     }
 
     [TestMethod]
-    public void Intersects_ReturnsTrue_WhenExactMatch()
+    public void Contains_ReturnsTrue_WhenExactMatch()
     {
-        Assert.IsTrue(FenceSelectHandler.Intersects(
+        Assert.IsTrue(FenceSelectHandler.Contains(
             new BoundingBox(10, 10, 30, 30),
             new BoundingBox(10, 10, 30, 30)));
     }
 
     [TestMethod]
-    public async Task Handle_PartialOverlap_SelectsElement()
+    public async Task Handle_PartialOverlap_DoesNotSelect()
     {
         var r1 = new SvgRect { Id = "r1", Attributes = new Dictionary<string, string> { ["x"] = "40", ["y"] = "40", ["width"] = "30", ["height"] = "30" } };
         var state = CreateState(r1);
         var handler = new FenceSelectHandler(state);
 
-        // Fence partially overlaps r1 (0,0)-(50,50) vs element (40,40)-(70,70)
+        // Fence only partially overlaps r1 (0,0)-(50,50) vs element (40,40)-(70,70)
         await handler.Handle(new FenceSelectCommand(new BoundingBox(0, 0, 50, 50)));
 
-        Assert.HasCount(1, state.SelectedElementIds);
-        Assert.Contains("r1", state.SelectedElementIds);
+        Assert.IsEmpty(state.SelectedElementIds);
     }
 
     [TestMethod]
@@ -175,10 +174,10 @@ public sealed class FenceSelectHandlerTests
     }
 
     [TestMethod]
-    public async Task Handle_SelectsTextPartiallyOutsideFence()
+    public async Task Handle_SelectsTextWhenAnchorInsideFence()
     {
-        // Text at (50, 100) has bounding box (50, 84, width, 16) - extends above Y=84
-        // Fence from (40, 90) should intersect even though top of text bbox is above fence
+        // Text at (50, 100) — bounding box extends above to Y=84 due to font height estimate
+        // Fence from (40, 90) to (140, 110) contains the anchor point (50, 100)
         var text = new SvgText { Id = "t1", Attributes = new Dictionary<string, string> { ["x"] = "50", ["y"] = "100" }, Content = "Hello" };
         var state = CreateState(text);
         var handler = new FenceSelectHandler(state);
@@ -190,11 +189,36 @@ public sealed class FenceSelectHandlerTests
     }
 
     [TestMethod]
-    public void Intersects_ReturnsFalse_WhenEdgesTouching()
+    public async Task Handle_DoesNotSelectTextWhenAnchorOutsideFence()
     {
-        // Two rectangles sharing an edge but not overlapping
-        Assert.IsFalse(FenceSelectHandler.Intersects(
-            new BoundingBox(0, 0, 10, 10),
-            new BoundingBox(10, 0, 10, 10)));
+        // Text at (200, 100) — anchor point is outside the fence
+        var text = new SvgText { Id = "t1", Attributes = new Dictionary<string, string> { ["x"] = "200", ["y"] = "100" }, Content = "Hello" };
+        var state = CreateState(text);
+        var handler = new FenceSelectHandler(state);
+
+        await handler.Handle(new FenceSelectCommand(new BoundingBox(0, 0, 100, 200)));
+
+        Assert.IsEmpty(state.SelectedElementIds);
+    }
+
+    [TestMethod]
+    public void ContainsPoint_ReturnsTrue_WhenPointInside()
+    {
+        Assert.IsTrue(FenceSelectHandler.ContainsPoint(
+            new BoundingBox(0, 0, 100, 100), 50, 50));
+    }
+
+    [TestMethod]
+    public void ContainsPoint_ReturnsFalse_WhenPointOutside()
+    {
+        Assert.IsFalse(FenceSelectHandler.ContainsPoint(
+            new BoundingBox(0, 0, 100, 100), 150, 50));
+    }
+
+    [TestMethod]
+    public void ContainsPoint_ReturnsTrue_WhenPointOnEdge()
+    {
+        Assert.IsTrue(FenceSelectHandler.ContainsPoint(
+            new BoundingBox(10, 10, 50, 50), 10, 10));
     }
 }
