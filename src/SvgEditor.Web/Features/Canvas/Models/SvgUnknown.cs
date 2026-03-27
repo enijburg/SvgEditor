@@ -7,7 +7,7 @@ public sealed class SvgUnknown(string tag) : SvgElement
     /// <summary>
     /// Raw inner XML content preserved from import (e.g., children of &lt;defs&gt;).
     /// </summary>
-    public string InnerXml { get; init; } = "";
+    public string InnerXml { get; set; } = "";
 
     public override SvgElement WithOffset(double dx, double dy)
     {

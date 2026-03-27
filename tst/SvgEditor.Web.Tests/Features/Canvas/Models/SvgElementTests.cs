@@ -138,4 +138,52 @@ public sealed class SvgElementTests
 
         Assert.AreEqual("10", image.Attributes["x"]);
     }
+
+    [TestMethod]
+    public void GetForegroundColorAttribute_Line_ReturnsStroke()
+    {
+        var line = new SvgLine { Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100", ["stroke"] = "red" } };
+
+        Assert.AreEqual("stroke", line.GetForegroundColorAttribute());
+    }
+
+    [TestMethod]
+    public void GetForegroundColorAttribute_Rect_ReturnsFill()
+    {
+        var rect = new SvgRect { Attributes = new Dictionary<string, string> { ["fill"] = "blue" } };
+
+        Assert.AreEqual("fill", rect.GetForegroundColorAttribute());
+    }
+
+    [TestMethod]
+    public void GetForegroundColorAttribute_PathWithFillNoneAndStroke_ReturnsStroke()
+    {
+        var path = new SvgPath { Attributes = new Dictionary<string, string> { ["d"] = "M0 0 L100 100", ["fill"] = "none", ["stroke"] = "#ff0000" } };
+
+        Assert.AreEqual("stroke", path.GetForegroundColorAttribute());
+    }
+
+    [TestMethod]
+    public void GetForegroundColorAttribute_PathWithFill_ReturnsFill()
+    {
+        var path = new SvgPath { Attributes = new Dictionary<string, string> { ["d"] = "M0 0 L100 100", ["fill"] = "#00ff00" } };
+
+        Assert.AreEqual("fill", path.GetForegroundColorAttribute());
+    }
+
+    [TestMethod]
+    public void GetForegroundColorAttribute_PolylineWithFillNoneAndStroke_ReturnsStroke()
+    {
+        var polyline = new SvgPolyline { Attributes = new Dictionary<string, string> { ["points"] = "0,0 100,100", ["fill"] = "none", ["stroke"] = "green" } };
+
+        Assert.AreEqual("stroke", polyline.GetForegroundColorAttribute());
+    }
+
+    [TestMethod]
+    public void GetForegroundColorAttribute_LineWithoutStrokeAttribute_ReturnsStroke()
+    {
+        var line = new SvgLine { Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "10", ["y2"] = "10" } };
+
+        Assert.AreEqual("stroke", line.GetForegroundColorAttribute());
+    }
 }

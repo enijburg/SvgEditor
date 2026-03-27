@@ -1,0 +1,77 @@
+@using SvgEditor.Web.Features.Canvas.Models
+@using SvgEditor.Web.Features.History.PushHistory
+@using SvgEditor.Web.Features.Styling.UpdateStyle
+@using SvgEditor.Web.Shared.Mediator
+@implements IDisposable
+@inject IMediator Mediator
+@inject EditorState EditorState
+
+@if (EditorState.SelectedElementIds.Count > 0)
+{
+    <span class="toolbar-divider"></span>
+    <label class="fill-label" title="Fill color">
+        🎨
+        <input type="color"
+               value="@GetCurrentFillColor()"
+               @onchange="OnFillColorChanged" />
+    </label>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        EditorState.OnStateChanged += OnStateChanged;
+    }
+
+    private void OnStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetCurrentFillColor()
+    {
+        if (EditorState.Document is null || EditorState.SelectedElementIds.Count == 0)
+            return "#000000";
+
+        var primaryId = EditorState.SelectedElementId ?? EditorState.SelectedElementIds.First();
+        var element = EditorState.Document.FindById(primaryId);
+        if (element is null)
+            return "#000000";
+
+        var attr = element.GetForegroundColorAttribute();
+        var color = element.Attributes.GetValueOrDefault(attr, "#000000");
+
+        return NormalizeToHex(color);
+    }
+
+    /// <summary>
+    /// Normalizes a color value to 7-char hex (#rrggbb) for the HTML color input.
+    /// Returns #000000 for unsupported formats (named colors, rgb(), etc.).
+    /// </summary>
+    internal static string NormalizeToHex(string color)
+    {
+        if (color.Length == 7 && color[0] == '#')
+            return color.ToLowerInvariant();
+
+        // Expand shorthand hex (#rgb → #rrggbb)
+        if (color.Length == 4 && color[0] == '#')
+            return $"#{color[1]}{color[1]}{color[2]}{color[2]}{color[3]}{color[3]}".ToLowerInvariant();
+
+        return "#000000";
+    }
+
+    private async Task OnFillColorChanged(ChangeEventArgs e)
+    {
+        var color = e.Value?.ToString();
+        if (string.IsNullOrEmpty(color) || EditorState.SelectedElementIds.Count == 0)
+            return;
+
+        await Mediator.Send(new PushHistoryCommand("Change color"));
+        await Mediator.Send(new UpdateFillColorCommand(EditorState.SelectedElementIds, color));
+    }
+
+    public void Dispose()
+    {
+        EditorState.OnStateChanged -= OnStateChanged;
+    }
+}

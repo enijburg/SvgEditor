@@ -10,6 +10,26 @@ public abstract class SvgElement
     public abstract SvgElement DeepClone();
     public abstract BoundingBox? GetBoundingBox();
 
+    /// <summary>
+    /// Returns the attribute name that represents the visible foreground color.
+    /// For stroke-based elements (lines, polylines, and elements with fill="none"),
+    /// the foreground is "stroke". For filled shapes, it is "fill".
+    /// </summary>
+    public string GetForegroundColorAttribute()
+    {
+        // Lines have no fill area — their foreground is always stroke
+        if (this is SvgLine)
+            return "stroke";
+
+        // For other elements, if fill is explicitly "none" and a stroke is present,
+        // the foreground color is the stroke
+        var fill = Attributes.GetValueOrDefault("fill");
+        if (string.Equals(fill, "none", StringComparison.OrdinalIgnoreCase) && Attributes.ContainsKey("stroke"))
+            return "stroke";
+
+        return "fill";
+    }
+
     protected static double ParseDouble(string? value, double defaultValue = 0) =>
         double.TryParse(value, System.Globalization.NumberStyles.Any,
             System.Globalization.CultureInfo.InvariantCulture, out var result)
