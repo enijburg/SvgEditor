@@ -28,7 +28,7 @@ public sealed partial class PromptParser
         ["teal"] = "#008080",
     };
 
-    [GeneratedRegex(@"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})")]
+    [GeneratedRegex(@"#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})")]
     private static partial Regex HexColorRegex();
 
     [GeneratedRegex(@"(-?\d+(?:\.\d+)?)\s*(?:pixels?|px)\s+(?:to\s+the\s+)?(left|right|up|down)", RegexOptions.IgnoreCase)]
@@ -47,8 +47,14 @@ public sealed partial class PromptParser
         var commands = new List<SvgCommand>();
         var summary = "";
 
+        // Try stroke (before fill, since stroke keywords are more specific)
+        if (TryParseStrokeCommand(prompt, context, out var strokeCommands, out var strokeSummary))
+        {
+            commands.AddRange(strokeCommands);
+            summary = strokeSummary;
+        }
         // Try fill color change
-        if (TryParseFillCommand(prompt, context, out var fillCommands, out var fillSummary))
+        else if (TryParseFillCommand(prompt, context, out var fillCommands, out var fillSummary))
         {
             commands.AddRange(fillCommands);
             summary = fillSummary;
@@ -64,12 +70,6 @@ public sealed partial class PromptParser
         {
             commands.AddRange(alignCommands);
             summary = alignSummary;
-        }
-        // Try stroke
-        else if (TryParseStrokeCommand(prompt, context, out var strokeCommands, out var strokeSummary))
-        {
-            commands.AddRange(strokeCommands);
-            summary = strokeSummary;
         }
         else
         {
