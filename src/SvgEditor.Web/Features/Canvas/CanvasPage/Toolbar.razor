@@ -4,6 +4,7 @@
 @using SvgEditor.Web.Features.History.UndoRedo
 @using SvgEditor.Web.Features.History.Models
 @using SvgEditor.Web.Shared.Mediator
+@implements IDisposable
 @inject IMediator Mediator
 @inject EditorState EditorState
 @inject HistoryStack HistoryStack
@@ -26,6 +27,16 @@
 </div>
 
 @code {
+    protected override void OnInitialized()
+    {
+        EditorState.OnStateChanged += OnStateChanged;
+    }
+
+    private void OnStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
     private async Task OpenFile()
     {
         var content = await JSRuntime.InvokeAsync<string?>("svgEditorFile.openFilePicker");
@@ -53,5 +64,10 @@
     private async Task Redo()
     {
         await Mediator.Send(new RedoCommand());
+    }
+
+    public void Dispose()
+    {
+        EditorState.OnStateChanged -= OnStateChanged;
     }
 }
