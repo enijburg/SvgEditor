@@ -22,4 +22,26 @@ public sealed class SvgGroup : SvgElement
         Attributes = new Dictionary<string, string>(Attributes),
         Children = Children.Select(c => c.DeepClone()).ToList()
     };
+
+    public override BoundingBox? GetBoundingBox()
+    {
+        var minX = double.MaxValue;
+        var minY = double.MaxValue;
+        var maxX = double.MinValue;
+        var maxY = double.MinValue;
+        var found = false;
+
+        foreach (var child in Children)
+        {
+            var bb = child.GetBoundingBox();
+            if (bb is null) continue;
+            minX = Math.Min(minX, bb.X);
+            minY = Math.Min(minY, bb.Y);
+            maxX = Math.Max(maxX, bb.X + bb.Width);
+            maxY = Math.Max(maxY, bb.Y + bb.Height);
+            found = true;
+        }
+
+        return found ? new BoundingBox(minX, minY, maxX - minX, maxY - minY) : null;
+    }
 }

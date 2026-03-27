@@ -25,7 +25,20 @@
                  @ref="_svgRef">
                 @foreach (var element in EditorState.Document.Elements)
                 {
-                    <SvgElementRenderer Element="element" SelectedId="EditorState.SelectedElementId" />
+                    <SvgElementRenderer Element="element" SelectedIds="EditorState.SelectedElementIds" />
+                }
+                <SelectionDecorator Elements="GetSelectedElements()" />
+                @if (_fenceRect is not null)
+                {
+                    <rect x="@F(_fenceRect.Value.x)"
+                          y="@F(_fenceRect.Value.y)"
+                          width="@F(_fenceRect.Value.w)"
+                          height="@F(_fenceRect.Value.h)"
+                          fill="rgba(13,110,253,0.1)"
+                          stroke="#0d6efd"
+                          stroke-width="1"
+                          stroke-dasharray="4,2"
+                          pointer-events="none" />
                 }
             </svg>
         }
@@ -45,6 +58,10 @@
     private bool _historyPushed;
     private string? _dragElementId;
     private bool _canvasInitialized;
+    private bool _isFencing;
+    private (double x, double y, double w, double h)? _fenceRect;
+    private double _fenceStartX;
+    private double _fenceStartY;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,18 +103,78 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private List<SvgElement> GetSelectedElements()
+    {
+        if (EditorState.Document is null || EditorState.SelectedElementIds.Count == 0)
+            return [];
+
+        var result = new List<SvgElement>();
+        foreach (var id in EditorState.SelectedElementIds)
+        {
+            var el = EditorState.Document.FindById(id);
+            if (el is not null)
+                result.Add(el);
+        }
+        return result;
+    }
+
+    private static string F(double value) =>
+        value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     [JSInvokable]
-    public async Task OnElementMouseDown(string elementId, double svgX, double svgY)
+    public async Task OnElementMouseDown(string elementId, double svgX, double svgY, bool ctrlKey)
     {
         _historyPushed = false;
-        _dragElementId = elementId;
+        _isFencing = false;
+        _fenceRect = null;
 
-        await Mediator.Send(new SelectElementCommand(elementId));
+        await Mediator.Send(new SelectElementCommand(elementId, ctrlKey));
+
+        // If this element is in the selection, enable dragging all selected elements
+        if (EditorState.SelectedElementIds.Contains(elementId))
+        {
+            _dragElementId = elementId;
+        }
+        else
+        {
+            _dragElementId = null;
+        }
     }
 
     [JSInvokable]
-    public async Task OnMouseMove(double dx, double dy)
+    public async Task OnCanvasMouseDown(double svgX, double svgY, bool ctrlKey)
     {
+        _historyPushed = false;
+        _dragElementId = null;
+
+        if (!ctrlKey)
+        {
+            // Clear selection when clicking on empty canvas without Ctrl
+            await Mediator.Send(new SelectElementCommand(null));
+        }
+
+        // Start fence selection
+        _isFencing = true;
+        _fenceStartX = svgX;
+        _fenceStartY = svgY;
+        _fenceRect = (svgX, svgY, 0, 0);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnMouseMove(double dx, double dy, double svgX, double svgY)
+    {
+        if (_isFencing)
+        {
+            var x = Math.Min(_fenceStartX, svgX);
+            var y = Math.Min(_fenceStartY, svgY);
+            var w = Math.Abs(svgX - _fenceStartX);
+            var h = Math.Abs(svgY - _fenceStartY);
+            _fenceRect = (x, y, w, h);
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
         if (_dragElementId is null) return;
 
         // Push history snapshot once, before the first move
@@ -107,15 +184,28 @@
             await Mediator.Send(new PushHistoryCommand("Move element"));
         }
 
-        await Mediator.Send(new UpdateElementCommand(_dragElementId, dx, dy));
+        if (EditorState.SelectedElementIds.Count > 1)
+        {
+            await Mediator.Send(new UpdateMultipleElementsCommand(EditorState.SelectedElementIds, dx, dy));
+        }
+        else
+        {
+            await Mediator.Send(new UpdateElementCommand(_dragElementId, dx, dy));
+        }
     }
 
     [JSInvokable]
-    public Task OnMouseUp()
+    public async Task OnMouseUp(double svgX, double svgY)
     {
+        if (_isFencing && _fenceRect is var (x, y, w, h) && (w > 2 || h > 2))
+        {
+            await Mediator.Send(new FenceSelectCommand(new BoundingBox(x, y, w, h)));
+        }
+
         _historyPushed = false;
         _dragElementId = null;
-        return Task.CompletedTask;
+        _isFencing = false;
+        _fenceRect = null;
     }
 
     public async ValueTask DisposeAsync()

@@ -29,4 +29,6 @@ public sealed class SvgText : SvgElement
     }
 
     public override SvgElement DeepClone() => new SvgText { Id = Id, Attributes = new Dictionary<string, string>(Attributes), Content = Content };
+
+    public override BoundingBox? GetBoundingBox() => new BoundingBox(X, Y - 16, Content.Length * 8, 16);
 }

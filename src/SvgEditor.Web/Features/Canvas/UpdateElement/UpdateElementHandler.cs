@@ -20,3 +20,26 @@ public sealed class UpdateElementHandler(EditorState editorState) : IRequestHand
         return Task.FromResult(Unit.Value);
     }
 }
+
+public sealed class UpdateMultipleElementsHandler(EditorState editorState) : IRequestHandler<UpdateMultipleElementsCommand, Unit>
+{
+    public Task<Unit> Handle(UpdateMultipleElementsCommand request, CancellationToken cancellationToken = default)
+    {
+        if (editorState.Document is null)
+            throw new InvalidOperationException("No document loaded.");
+
+        var doc = editorState.Document;
+        foreach (var elementId in request.ElementIds)
+        {
+            var element = doc.FindById(elementId);
+            if (element is null) continue;
+
+            var moved = element.WithOffset(request.Dx, request.Dy);
+            doc = doc.ReplaceElement(moved);
+        }
+
+        editorState.Document = doc;
+        editorState.NotifyStateChanged();
+        return Task.FromResult(Unit.Value);
+    }
+}

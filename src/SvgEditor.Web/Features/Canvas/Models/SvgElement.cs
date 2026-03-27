@@ -8,6 +8,7 @@ public abstract class SvgElement
 
     public abstract SvgElement WithOffset(double dx, double dy);
     public abstract SvgElement DeepClone();
+    public abstract BoundingBox? GetBoundingBox();
 
     protected static double ParseDouble(string? value, double defaultValue = 0) =>
         double.TryParse(value, System.Globalization.NumberStyles.Any,

@@ -1,0 +1,27 @@
+@using SvgEditor.Web.Features.Canvas.Models
+
+@foreach (var element in Elements)
+{
+    var bb = element.GetBoundingBox();
+    if (bb is null) continue;
+
+    <rect x="@F(bb.X - Padding)"
+          y="@F(bb.Y - Padding)"
+          width="@F(bb.Width + Padding * 2)"
+          height="@F(bb.Height + Padding * 2)"
+          fill="none"
+          stroke="#0d6efd"
+          stroke-width="1.5"
+          stroke-dasharray="6,3"
+          pointer-events="none" />
+}
+
+@code {
+    private const double Padding = 4;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyCollection<SvgElement> Elements { get; set; } = [];
+
+    private static string F(double value) =>
+        value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}

@@ -33,4 +33,6 @@ public sealed class SvgCircle : SvgElement
     }
 
     public override SvgElement DeepClone() => new SvgCircle { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
+
+    public override BoundingBox? GetBoundingBox() => new BoundingBox(Cx - R, Cy - R, R * 2, R * 2);
 }

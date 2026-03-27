@@ -22,4 +22,6 @@ public sealed class SvgUnknown(string tag) : SvgElement
         Attributes = new Dictionary<string, string>(Attributes),
         InnerXml = InnerXml
     };
+
+    public override BoundingBox? GetBoundingBox() => null;
 }

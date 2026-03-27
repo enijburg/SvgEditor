@@ -39,4 +39,6 @@ public sealed class SvgEllipse : SvgElement
     }
 
     public override SvgElement DeepClone() => new SvgEllipse { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
+
+    public override BoundingBox? GetBoundingBox() => new BoundingBox(Cx - Rx, Cy - Ry, Rx * 2, Ry * 2);
 }

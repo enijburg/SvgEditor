@@ -5,7 +5,7 @@
     <g @attributes="GetAttributes(group)">
         @foreach (var child in group.Children)
         {
-            <SvgElementRenderer Element="child" SelectedId="SelectedId" />
+            <SvgElementRenderer Element="child" SelectedIds="SelectedIds" />
         }
     </g>
 }
@@ -57,6 +57,10 @@ else
 @code {
     [Parameter, EditorRequired] public SvgElement Element { get; set; } = null!;
     [Parameter] public string? SelectedId { get; set; }
+    [Parameter] public IReadOnlySet<string>? SelectedIds { get; set; }
+
+    private bool IsSelected(string id) =>
+        SelectedIds is not null ? SelectedIds.Contains(id) : id == SelectedId;
 
     private Dictionary<string, object> GetAttributes(SvgElement element)
     {
@@ -67,11 +71,6 @@ else
             result[k] = v;
         }
         result["data-element-id"] = element.Id;
-        if (element.Id == SelectedId)
-        {
-            var existing = result.TryGetValue("class", out var cls) ? cls + " selected" : "selected";
-            result["class"] = existing;
-        }
         return result;
     }
 
@@ -127,10 +126,6 @@ else
                 $"{System.Net.WebUtility.HtmlEncode(kvp.Key)}=\"{System.Net.WebUtility.HtmlEncode(kvp.Value)}\"");
         var attrString = string.Join(" ", attrs);
         attrString += $" data-element-id=\"{System.Net.WebUtility.HtmlEncode(element.Id)}\"";
-        if (element.Id == SelectedId)
-        {
-            attrString += " class=\"selected\"";
-        }
         return new MarkupString($"<{tag} {attrString}>{element.InnerXml}</{tag}>");
     }
 }

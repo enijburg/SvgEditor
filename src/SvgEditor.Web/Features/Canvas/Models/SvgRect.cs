@@ -51,4 +51,6 @@ public sealed class SvgRect : SvgElement
     }
 
     public override SvgElement DeepClone() => new SvgRect { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
+
+    public override BoundingBox? GetBoundingBox() => new BoundingBox(X, Y, Width, Height);
 }

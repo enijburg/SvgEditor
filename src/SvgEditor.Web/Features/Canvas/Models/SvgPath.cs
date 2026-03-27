@@ -20,6 +20,59 @@ public sealed class SvgPath : SvgElement
 
     public override SvgElement DeepClone() => new SvgPath { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
+    public override BoundingBox? GetBoundingBox()
+    {
+        // Approximate: parse M/L/C coordinates from the d attribute for a rough bounding box
+        var d = D;
+        if (string.IsNullOrWhiteSpace(d)) return null;
+
+        var minX = double.MaxValue;
+        var minY = double.MaxValue;
+        var maxX = double.MinValue;
+        var maxY = double.MinValue;
+        var found = false;
+
+        // Extract all numbers from the path data
+        int i = 0;
+        while (i < d.Length)
+        {
+            // Skip non-numeric characters (letters, whitespace, commas)
+            while (i < d.Length && !char.IsDigit(d[i]) && d[i] != '-' && d[i] != '.')
+                i++;
+            if (i >= d.Length) break;
+
+            int start = i;
+            if (d[i] == '-') i++;
+            while (i < d.Length && (char.IsDigit(d[i]) || d[i] == '.')) i++;
+            if (i == start) { i++; continue; }
+
+            if (!double.TryParse(d.AsSpan(start, i - start), System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var x))
+                continue;
+
+            // Skip separators
+            while (i < d.Length && (d[i] == ',' || d[i] == ' ')) i++;
+            if (i >= d.Length) break;
+
+            int start2 = i;
+            if (i < d.Length && d[i] == '-') i++;
+            while (i < d.Length && (char.IsDigit(d[i]) || d[i] == '.')) i++;
+            if (i == start2) continue;
+
+            if (!double.TryParse(d.AsSpan(start2, i - start2), System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var y))
+                continue;
+
+            minX = Math.Min(minX, x);
+            minY = Math.Min(minY, y);
+            maxX = Math.Max(maxX, x);
+            maxY = Math.Max(maxY, y);
+            found = true;
+        }
+
+        return found ? new BoundingBox(minX, minY, maxX - minX, maxY - minY) : null;
+    }
+
     internal static void ApplyTranslation(Dictionary<string, string> attrs, double dx, double dy)
     {
         if (attrs.TryGetValue("transform", out var existing) && existing.StartsWith("translate(", StringComparison.Ordinal))
