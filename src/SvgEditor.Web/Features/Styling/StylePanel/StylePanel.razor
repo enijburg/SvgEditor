@@ -30,18 +30,31 @@
 
     private string GetCurrentFillColor()
     {
-        if (EditorState.Document is null || EditorState.SelectedElementId is null)
+        if (EditorState.Document is null || EditorState.SelectedElementIds.Count == 0)
             return "#000000";
 
-        var element = EditorState.Document.FindById(EditorState.SelectedElementId);
+        var primaryId = EditorState.SelectedElementId ?? EditorState.SelectedElementIds.First();
+        var element = EditorState.Document.FindById(primaryId);
         if (element is null)
             return "#000000";
 
         var fill = element.Attributes.GetValueOrDefault("fill", "#000000");
 
-        // The HTML color input requires a 7-char hex format; return default for non-hex values
-        if (fill.Length == 7 && fill.StartsWith('#'))
-            return fill;
+        return NormalizeToHex(fill);
+    }
+
+    /// <summary>
+    /// Normalizes a color value to 7-char hex (#rrggbb) for the HTML color input.
+    /// Returns #000000 for unsupported formats (named colors, rgb(), etc.).
+    /// </summary>
+    internal static string NormalizeToHex(string color)
+    {
+        if (color.Length == 7 && color[0] == '#')
+            return color.ToLowerInvariant();
+
+        // Expand shorthand hex (#rgb → #rrggbb)
+        if (color.Length == 4 && color[0] == '#')
+            return $"#{color[1]}{color[1]}{color[2]}{color[2]}{color[3]}{color[3]}".ToLowerInvariant();
 
         return "#000000";
     }
