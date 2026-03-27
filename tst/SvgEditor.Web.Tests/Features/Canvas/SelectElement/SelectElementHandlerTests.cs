@@ -113,6 +113,41 @@ public sealed class SelectElementHandlerTests
     }
 
     [TestMethod]
+    public async Task Handle_CtrlClick_AfterFenceSelect_AddsToSelection()
+    {
+        var state = CreateState(new SvgRect { Id = "r1" }, new SvgRect { Id = "r2" }, new SvgRect { Id = "r3" });
+        // Simulate fence select result: multiple elements selected, no single SelectedElementId
+        state.SelectedElementIds = ["r1", "r2"];
+        state.SelectedElementId = null;
+        var handler = new SelectElementHandler(state);
+
+        await handler.Handle(new SelectElementCommand("r3", CtrlKey: true));
+
+        Assert.HasCount(3, state.SelectedElementIds);
+        Assert.Contains("r1", state.SelectedElementIds);
+        Assert.Contains("r2", state.SelectedElementIds);
+        Assert.Contains("r3", state.SelectedElementIds);
+        Assert.AreEqual("r3", state.SelectedElementId);
+    }
+
+    [TestMethod]
+    public async Task Handle_CtrlClick_AfterFenceSelect_DeselectsElement()
+    {
+        var state = CreateState(new SvgRect { Id = "r1" }, new SvgRect { Id = "r2" }, new SvgRect { Id = "r3" });
+        // Simulate fence select result: multiple elements selected
+        state.SelectedElementIds = ["r1", "r2", "r3"];
+        state.SelectedElementId = null;
+        var handler = new SelectElementHandler(state);
+
+        await handler.Handle(new SelectElementCommand("r2", CtrlKey: true));
+
+        Assert.HasCount(2, state.SelectedElementIds);
+        Assert.Contains("r1", state.SelectedElementIds);
+        Assert.DoesNotContain("r2", state.SelectedElementIds);
+        Assert.Contains("r3", state.SelectedElementIds);
+    }
+
+    [TestMethod]
     public async Task Handle_NotifiesStateChanged()
     {
         var state = CreateState(new SvgRect { Id = "r1" });

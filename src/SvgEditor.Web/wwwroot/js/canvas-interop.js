@@ -38,7 +38,16 @@ window.svgEditorCanvas = (function () {
                 lastSvgPoint ? lastSvgPoint.x : 0,
                 lastSvgPoint ? lastSvgPoint.y : 0,
                 ctrlKey);
-        } else if (elementId || target === svgElement || target === evt.target) {
+        } else if (elementId) {
+            // Ctrl+click on element: toggle selection and start potential fence
+            evt.preventDefault();
+            isDragging = false;
+            isFencing = true;
+            dotNetRef.invokeMethodAsync('OnElementMouseDown', elementId,
+                lastSvgPoint ? lastSvgPoint.x : 0,
+                lastSvgPoint ? lastSvgPoint.y : 0,
+                ctrlKey);
+        } else if (target === svgElement || target === evt.target) {
             evt.preventDefault();
             isDragging = false;
             isFencing = true;
