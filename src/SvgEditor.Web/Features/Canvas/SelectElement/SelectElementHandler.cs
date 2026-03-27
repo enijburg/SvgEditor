@@ -27,9 +27,14 @@ public sealed class SelectElementHandler(EditorState editorState) : IRequestHand
             editorState.SelectedElementId = added ? request.ElementId
                 : ids.Count > 0 ? ids.First() : null;
         }
+        else if (editorState.SelectedElementIds.Contains(request.ElementId))
+        {
+            // Regular click on an already-selected element — keep multiselection to enable dragging
+            editorState.SelectedElementId = request.ElementId;
+        }
         else
         {
-            // Regular click — select only this element
+            // Regular click on an unselected element — select only this element
             editorState.SelectedElementId = request.ElementId;
             editorState.SelectedElementIds = [request.ElementId];
         }

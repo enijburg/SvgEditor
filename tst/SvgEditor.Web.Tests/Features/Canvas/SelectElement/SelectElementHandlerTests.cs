@@ -85,13 +85,29 @@ public sealed class SelectElementHandlerTests
     [TestMethod]
     public async Task Handle_RegularClick_ReplacesSelection()
     {
+        var state = CreateState(new SvgRect { Id = "r1" }, new SvgRect { Id = "r2" }, new SvgRect { Id = "r3" });
+        state.SelectedElementIds = ["r1", "r2"];
+        var handler = new SelectElementHandler(state);
+
+        await handler.Handle(new SelectElementCommand("r3"));
+
+        Assert.HasCount(1, state.SelectedElementIds);
+        Assert.Contains("r3", state.SelectedElementIds);
+        Assert.AreEqual("r3", state.SelectedElementId);
+    }
+
+    [TestMethod]
+    public async Task Handle_RegularClick_OnSelectedElement_PreservesMultiSelection()
+    {
         var state = CreateState(new SvgRect { Id = "r1" }, new SvgRect { Id = "r2" });
         state.SelectedElementIds = ["r1", "r2"];
+        state.SelectedElementId = "r1";
         var handler = new SelectElementHandler(state);
 
         await handler.Handle(new SelectElementCommand("r2"));
 
-        Assert.HasCount(1, state.SelectedElementIds);
+        Assert.HasCount(2, state.SelectedElementIds);
+        Assert.Contains("r1", state.SelectedElementIds);
         Assert.Contains("r2", state.SelectedElementIds);
         Assert.AreEqual("r2", state.SelectedElementId);
     }
