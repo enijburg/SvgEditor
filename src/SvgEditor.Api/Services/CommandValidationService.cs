@@ -5,6 +5,8 @@ namespace SvgEditor.Api.Services;
 
 public sealed partial class CommandValidationService
 {
+    private const double MaxCoordinateValue = 100000;
+
     private static readonly HashSet<string> ValidAlignments = new(StringComparer.OrdinalIgnoreCase)
     {
         "left", "center", "right", "top", "middle", "bottom"
@@ -122,7 +124,7 @@ public sealed partial class CommandValidationService
             issues.Add($"{fieldName} must be a finite number.");
         }
 
-        if (Math.Abs(value) > 100000)
+        if (Math.Abs(value) > MaxCoordinateValue)
         {
             issues.Add($"{fieldName} value {value} is out of reasonable range.");
         }

@@ -6,6 +6,8 @@ namespace SvgEditor.Api.Services;
 
 public sealed partial class PromptParser
 {
+    private const double DefaultStrokeWidth = 1;
+
     private static readonly Dictionary<string, string> ColorNames = new(StringComparer.OrdinalIgnoreCase)
     {
         ["red"] = "#FF0000",
@@ -220,7 +222,7 @@ public sealed partial class PromptParser
 
         foreach (var elementId in context.Selection)
         {
-            commands.Add(new SetStrokeCommand { ElementId = elementId, Stroke = color, Width = 1 });
+            commands.Add(new SetStrokeCommand { ElementId = elementId, Stroke = color, Width = DefaultStrokeWidth });
         }
 
         summary = context.Selection.Count == 1
