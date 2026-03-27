@@ -92,23 +92,13 @@ public sealed class UpdateFillColorHandler(EditorState editorState) : IRequestHa
                 foreach (var child in marker.Elements())
                 {
                     // Update fill on marker children (the shapes that form the arrowhead)
-                    if (child.Attribute("fill") is not null)
-                    {
-                        child.SetAttributeValue("fill", color);
-                        changed = true;
-                    }
-                    else
-                    {
-                        // If no fill attribute exists, add one so the arrowhead takes the color
-                        child.SetAttributeValue("fill", color);
-                        changed = true;
-                    }
+                    child.SetAttributeValue("fill", color);
+                    changed = true;
 
                     // Also update stroke if present on marker children
                     if (child.Attribute("stroke") is not null)
                     {
                         child.SetAttributeValue("stroke", color);
-                        changed = true;
                     }
                 }
             }
