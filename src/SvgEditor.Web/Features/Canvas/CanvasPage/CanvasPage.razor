@@ -1,0 +1,127 @@
+@page "/"
+@using Microsoft.JSInterop
+@using SvgEditor.Web.Features.Canvas.Models
+@using SvgEditor.Web.Features.Canvas.SelectElement
+@using SvgEditor.Web.Features.Canvas.UpdateElement
+@using SvgEditor.Web.Features.History.PushHistory
+@using SvgEditor.Web.Shared.Mediator
+@using SvgEditor.Web.Shared.Storage
+@implements IAsyncDisposable
+@inject IMediator Mediator
+@inject EditorState EditorState
+@inject IStorageService StorageService
+@inject AutoSaveService AutoSaveService
+@inject IJSRuntime JSRuntime
+
+<div class="canvas-page">
+    <Toolbar />
+    <div class="canvas-area">
+        @if (EditorState.Document is not null)
+        {
+            <svg id="canvas-svg"
+                 viewBox="@EditorState.Document.ViewBox"
+                 width="@(EditorState.Document.Width > 0 ? EditorState.Document.Width.ToString(System.Globalization.CultureInfo.InvariantCulture) : null)"
+                 height="@(EditorState.Document.Height > 0 ? EditorState.Document.Height.ToString(System.Globalization.CultureInfo.InvariantCulture) : null)"
+                 @ref="_svgRef">
+                @foreach (var element in EditorState.Document.Elements)
+                {
+                    <SvgElementRenderer Element="element" SelectedId="EditorState.SelectedElementId" />
+                }
+            </svg>
+        }
+        else
+        {
+            <div class="empty-state">
+                <p>No SVG document loaded.</p>
+                <p>Click <strong>Open</strong> to import an SVG file.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private ElementReference _svgRef;
+    private DotNetObjectReference<CanvasPage>? _dotNetRef;
+    private bool _historyPushed;
+    private string? _dragElementId;
+    private bool _canvasInitialized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        EditorState.OnStateChanged += OnEditorStateChanged;
+
+        // Restore from localStorage on startup
+        try
+        {
+            var saved = await StorageService.GetAsync<SvgDocument>(StorageKeys.ActiveDocument);
+            if (saved is not null && EditorState.Document is null)
+            {
+                EditorState.Document = saved;
+            }
+        }
+        catch
+        {
+            // Ignore storage errors on startup
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_canvasInitialized && EditorState.Document is not null)
+        {
+            await InitCanvas();
+        }
+    }
+
+    private async Task InitCanvas()
+    {
+        if (_canvasInitialized) return;
+        _canvasInitialized = true;
+        _dotNetRef = DotNetObjectReference.Create(this);
+        await JSRuntime.InvokeVoidAsync("svgEditorCanvas.initCanvas", _dotNetRef, _svgRef);
+    }
+
+    private void OnEditorStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnElementMouseDown(string elementId, double svgX, double svgY)
+    {
+        _historyPushed = false;
+        _dragElementId = elementId;
+
+        await Mediator.Send(new SelectElementCommand(elementId));
+    }
+
+    [JSInvokable]
+    public async Task OnMouseMove(double dx, double dy)
+    {
+        if (_dragElementId is null) return;
+
+        // Push history snapshot once, before the first move
+        if (!_historyPushed)
+        {
+            _historyPushed = true;
+            await Mediator.Send(new PushHistoryCommand("Move element"));
+        }
+
+        await Mediator.Send(new UpdateElementCommand(_dragElementId, dx, dy));
+    }
+
+    [JSInvokable]
+    public Task OnMouseUp()
+    {
+        _historyPushed = false;
+        _dragElementId = null;
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        EditorState.OnStateChanged -= OnEditorStateChanged;
+        await JSRuntime.InvokeVoidAsync("svgEditorCanvas.dispose");
+        _dotNetRef?.Dispose();
+    }
+}

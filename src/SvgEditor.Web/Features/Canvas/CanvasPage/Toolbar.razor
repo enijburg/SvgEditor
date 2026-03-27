@@ -1,0 +1,57 @@
+@using SvgEditor.Web.Features.Canvas.Models
+@using SvgEditor.Web.Features.IO.ImportSvg
+@using SvgEditor.Web.Features.IO.ExportSvg
+@using SvgEditor.Web.Features.History.UndoRedo
+@using SvgEditor.Web.Features.History.Models
+@using SvgEditor.Web.Shared.Mediator
+@inject IMediator Mediator
+@inject EditorState EditorState
+@inject HistoryStack HistoryStack
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime
+
+<div class="toolbar">
+    <button class="btn btn-sm btn-primary" @onclick="OpenFile" title="Open SVG file">
+        📂 Open
+    </button>
+    <button class="btn btn-sm btn-success" @onclick="SaveFile" disabled="@(EditorState.Document is null)" title="Export SVG">
+        💾 Save
+    </button>
+    <span class="toolbar-divider"></span>
+    <button class="btn btn-sm btn-secondary" @onclick="Undo" disabled="@(!HistoryStack.CanUndo)" title="Undo">
+        ↩ Undo
+    </button>
+    <button class="btn btn-sm btn-secondary" @onclick="Redo" disabled="@(!HistoryStack.CanRedo)" title="Redo">
+        ↪ Redo
+    </button>
+</div>
+
+@code {
+    private async Task OpenFile()
+    {
+        var content = await JSRuntime.InvokeAsync<string?>("svgEditorFile.openFilePicker");
+        if (content is null) return;
+
+        var document = await Mediator.Send(new ImportSvgCommand(content));
+        EditorState.Document = document;
+        HistoryStack.Clear();
+        EditorState.NotifyStateChanged();
+    }
+
+    private async Task SaveFile()
+    {
+        if (EditorState.Document is null) return;
+
+        var svg = await Mediator.Send(new ExportSvgCommand(EditorState.Document));
+        await JSRuntime.InvokeVoidAsync("svgEditorFile.downloadFile", "export.svg", svg);
+    }
+
+    private async Task Undo()
+    {
+        await Mediator.Send(new UndoCommand());
+    }
+
+    private async Task Redo()
+    {
+        await Mediator.Send(new RedoCommand());
+    }
+}

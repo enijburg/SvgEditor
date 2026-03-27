@@ -1,0 +1,136 @@
+@using SvgEditor.Web.Features.Canvas.Models
+
+@if (Element is SvgGroup group)
+{
+    <g @attributes="GetAttributes(group)">
+        @foreach (var child in group.Children)
+        {
+            <SvgElementRenderer Element="child" SelectedId="SelectedId" />
+        }
+    </g>
+}
+else if (Element is SvgRect)
+{
+    <rect @attributes="GetAttributes(Element)" />
+}
+else if (Element is SvgCircle)
+{
+    <circle @attributes="GetAttributes(Element)" />
+}
+else if (Element is SvgEllipse)
+{
+    <ellipse @attributes="GetAttributes(Element)" />
+}
+else if (Element is SvgLine)
+{
+    <line @attributes="GetHitAreaAttributes(Element)" />
+    <line @attributes="GetAttributes(Element)" />
+}
+else if (Element is SvgPolyline)
+{
+    <polyline @attributes="GetHitAreaAttributes(Element)" />
+    <polyline @attributes="GetAttributes(Element)" />
+}
+else if (Element is SvgPolygon)
+{
+    <polygon @attributes="GetAttributes(Element)" />
+}
+else if (Element is SvgPath)
+{
+    <path @attributes="GetHitAreaAttributes(Element)" />
+    <path @attributes="GetAttributes(Element)" />
+}
+else if (Element is SvgText textEl)
+{
+    @((MarkupString)RenderSvgText(textEl))
+}
+else if (Element is SvgUnknown unknownEl)
+{
+    @((MarkupString)RenderUnknown(unknownEl))
+}
+else
+{
+    @* Fallback — should not normally be reached *@
+    <g @attributes="GetAttributes(Element)"></g>
+}
+
+@code {
+    [Parameter, EditorRequired] public SvgElement Element { get; set; } = null!;
+    [Parameter] public string? SelectedId { get; set; }
+
+    private Dictionary<string, object> GetAttributes(SvgElement element)
+    {
+        var result = new Dictionary<string, object>();
+        foreach (var (k, v) in element.Attributes)
+        {
+            if (k == "data-element-id") continue;
+            result[k] = v;
+        }
+        result["data-element-id"] = element.Id;
+        if (element.Id == SelectedId)
+        {
+            var existing = result.TryGetValue("class", out var cls) ? cls + " selected" : "selected";
+            result["class"] = existing;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Builds attributes for an invisible wider hit-area element rendered behind
+    /// thin stroke-based elements (path, line, polyline) so they are easy to click.
+    /// </summary>
+    private static Dictionary<string, object> GetHitAreaAttributes(SvgElement element)
+    {
+        var result = new Dictionary<string, object>();
+
+        // Copy only geometry and transform attributes needed for hit-testing
+        foreach (var (k, v) in element.Attributes)
+        {
+            if (k is "data-element-id") continue;
+            // Keep geometry: d, points, x1/y1/x2/y2, transform
+            // Strip visual: fill, stroke, stroke-width, opacity, marker-*, filter, class
+            if (k is "fill" or "stroke" or "stroke-width" or "opacity"
+                or "filter" or "class"
+                or "stroke-dasharray" or "stroke-linecap" or "stroke-linejoin")
+                continue;
+            if (k.StartsWith("marker", StringComparison.Ordinal))
+                continue;
+            result[k] = v;
+        }
+
+        result["data-element-id"] = element.Id;
+        result["fill"] = "none";
+        result["stroke"] = "transparent";
+        result["stroke-width"] = "12";
+        result["pointer-events"] = "stroke";
+
+        return result;
+    }
+
+    private static MarkupString RenderSvgText(SvgText textEl)
+    {
+        var attrString = string.Join(" ", textEl.Attributes
+            .Where(kvp => kvp.Key != "data-element-id")
+            .Select(kvp =>
+                $"{System.Net.WebUtility.HtmlEncode(kvp.Key)}=\"{System.Net.WebUtility.HtmlEncode(kvp.Value)}\""));
+        attrString += $" data-element-id=\"{System.Net.WebUtility.HtmlEncode(textEl.Id)}\"";
+        var content = System.Net.WebUtility.HtmlEncode(textEl.Content);
+        return new MarkupString($"<text {attrString}>{content}</text>");
+    }
+
+    private MarkupString RenderUnknown(SvgUnknown element)
+    {
+        var tag = System.Net.WebUtility.HtmlEncode(element.Tag);
+        var attrs = element.Attributes
+            .Where(kvp => kvp.Key != "data-element-id")
+            .Select(kvp =>
+                $"{System.Net.WebUtility.HtmlEncode(kvp.Key)}=\"{System.Net.WebUtility.HtmlEncode(kvp.Value)}\"");
+        var attrString = string.Join(" ", attrs);
+        attrString += $" data-element-id=\"{System.Net.WebUtility.HtmlEncode(element.Id)}\"";
+        if (element.Id == SelectedId)
+        {
+            attrString += " class=\"selected\"";
+        }
+        return new MarkupString($"<{tag} {attrString}>{element.InnerXml}</{tag}>");
+    }
+}
