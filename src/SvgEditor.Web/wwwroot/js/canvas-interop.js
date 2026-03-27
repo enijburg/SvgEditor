@@ -74,6 +74,8 @@ window.svgEditorCanvas = (function () {
 
     function onKeyDown(evt) {
         if (!dotNetRef) return;
+        var tag = evt.target && evt.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (evt.target && evt.target.isContentEditable)) return;
         var ctrl = evt.ctrlKey || evt.metaKey;
         if (ctrl && evt.key === 'z' && !evt.shiftKey) {
             evt.preventDefault();
