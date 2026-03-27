@@ -14,7 +14,7 @@ public sealed class FenceSelectHandler(EditorState editorState) : IRequestHandle
 
         var fence = request.Fence;
         var ids = new HashSet<string>();
-        CollectIntersecting(editorState.Document.Elements, fence, ids);
+        CollectContained(editorState.Document.Elements, fence, ids);
 
         editorState.SelectedElementIds = ids;
         editorState.SelectedElementId = ids.Count == 1 ? ids.First() : null;
@@ -23,27 +23,27 @@ public sealed class FenceSelectHandler(EditorState editorState) : IRequestHandle
         return Task.FromResult(Unit.Value);
     }
 
-    private static void CollectIntersecting(List<SvgElement> elements, BoundingBox fence, HashSet<string> ids)
+    private static void CollectContained(List<SvgElement> elements, BoundingBox fence, HashSet<string> ids)
     {
         foreach (var element in elements)
         {
             if (element is SvgGroup group)
             {
-                CollectIntersecting(group.Children, fence, ids);
+                CollectContained(group.Children, fence, ids);
                 continue;
             }
 
             var bb = element.GetBoundingBox();
-            if (bb is not null && Intersects(fence, bb))
+            if (bb is not null && Contains(fence, bb))
             {
                 ids.Add(element.Id);
             }
         }
     }
 
-    public static bool Intersects(BoundingBox a, BoundingBox b) =>
-        a.X < b.X + b.Width &&
-        a.X + a.Width > b.X &&
-        a.Y < b.Y + b.Height &&
-        a.Y + a.Height > b.Y;
+    public static bool Contains(BoundingBox fence, BoundingBox element) =>
+        fence.X <= element.X &&
+        fence.Y <= element.Y &&
+        fence.X + fence.Width >= element.X + element.Width &&
+        fence.Y + fence.Height >= element.Y + element.Height;
 }

@@ -91,27 +91,48 @@ public sealed class FenceSelectHandlerTests
     }
 
     [TestMethod]
-    public void Intersects_ReturnsTrue_WhenOverlapping()
+    public void Contains_ReturnsTrue_WhenFullyContained()
     {
-        Assert.IsTrue(FenceSelectHandler.Intersects(
-            new BoundingBox(0, 0, 50, 50),
-            new BoundingBox(25, 25, 50, 50)));
+        Assert.IsTrue(FenceSelectHandler.Contains(
+            new BoundingBox(0, 0, 100, 100),
+            new BoundingBox(10, 10, 20, 20)));
     }
 
     [TestMethod]
-    public void Intersects_ReturnsFalse_WhenNotOverlapping()
+    public void Contains_ReturnsFalse_WhenNotOverlapping()
     {
-        Assert.IsFalse(FenceSelectHandler.Intersects(
+        Assert.IsFalse(FenceSelectHandler.Contains(
             new BoundingBox(0, 0, 10, 10),
             new BoundingBox(20, 20, 10, 10)));
     }
 
     [TestMethod]
-    public void Intersects_ReturnsFalse_WhenTouchingEdge()
+    public void Contains_ReturnsFalse_WhenPartiallyOverlapping()
     {
-        Assert.IsFalse(FenceSelectHandler.Intersects(
-            new BoundingBox(0, 0, 10, 10),
-            new BoundingBox(10, 10, 10, 10)));
+        Assert.IsFalse(FenceSelectHandler.Contains(
+            new BoundingBox(0, 0, 50, 50),
+            new BoundingBox(25, 25, 50, 50)));
+    }
+
+    [TestMethod]
+    public void Contains_ReturnsTrue_WhenExactMatch()
+    {
+        Assert.IsTrue(FenceSelectHandler.Contains(
+            new BoundingBox(10, 10, 30, 30),
+            new BoundingBox(10, 10, 30, 30)));
+    }
+
+    [TestMethod]
+    public async Task Handle_PartialOverlap_DoesNotSelect()
+    {
+        var r1 = new SvgRect { Id = "r1", Attributes = new Dictionary<string, string> { ["x"] = "40", ["y"] = "40", ["width"] = "30", ["height"] = "30" } };
+        var state = CreateState(r1);
+        var handler = new FenceSelectHandler(state);
+
+        // Fence only partially overlaps r1 (0,0)-(50,50) vs element (40,40)-(70,70)
+        await handler.Handle(new FenceSelectCommand(new BoundingBox(0, 0, 50, 50)));
+
+        Assert.IsEmpty(state.SelectedElementIds);
     }
 
     [TestMethod]
