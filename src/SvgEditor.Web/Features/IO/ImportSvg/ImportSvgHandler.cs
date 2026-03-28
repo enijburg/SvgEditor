@@ -24,8 +24,21 @@ public sealed class ImportSvgHandler : IRequestHandler<ImportSvgCommand, SvgDocu
         double.TryParse(attrs.GetValueOrDefault("height"), System.Globalization.NumberStyles.Any,
             System.Globalization.CultureInfo.InvariantCulture, out var height);
 
-        var elements = root.Elements()
-            .Select(ParseElement)
+        // Capture XML comments that appear before the root <svg> element in the document prolog
+        var prologComments = xDoc.Nodes()
+            .TakeWhile(n => n != root)
+            .OfType<XComment>()
+            .Select(c => c.Value)
+            .ToList();
+
+        // Parse child nodes of the root element, preserving comments in their original positions
+        var elements = root.Nodes()
+            .Select(node => node switch
+            {
+                XElement el => ParseElement(el),
+                XComment comment => (SvgElement)new SvgComment { Text = comment.Value },
+                _ => null
+            })
             .Where(e => e is not null)
             .Select(e => e!)
             .ToList();
@@ -36,7 +49,8 @@ public sealed class ImportSvgHandler : IRequestHandler<ImportSvgCommand, SvgDocu
             Width = width,
             Height = height,
             Elements = elements,
-            Attributes = attrs
+            Attributes = attrs,
+            PrologComments = prologComments
         };
 
         return Task.FromResult(document);

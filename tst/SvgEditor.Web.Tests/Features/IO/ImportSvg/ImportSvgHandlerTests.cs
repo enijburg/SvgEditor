@@ -125,4 +125,55 @@ public sealed class ImportSvgHandlerTests
         await Assert.ThrowsExactlyAsync<System.Xml.XmlException>(
             () => Handler.Handle(new ImportSvgCommand(svg)));
     }
+
+    [TestMethod]
+    public async Task Handle_InlineComment_ParsedAsSvgComment()
+    {
+        const string svg = """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <!-- layer: background -->
+                <rect x="0" y="0" width="100" height="100" />
+            </svg>
+            """;
+
+        var doc = await Handler.Handle(new ImportSvgCommand(svg));
+
+        var comments = doc.Elements.OfType<SvgEditor.Web.Features.Canvas.Models.SvgComment>().ToList();
+        Assert.HasCount(1, comments);
+        Assert.Contains(" layer: background ", comments[0].Text);
+    }
+
+    [TestMethod]
+    public async Task Handle_PrologComment_CapturedInPrologComments()
+    {
+        const string svg = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!-- Copyright 2024 Example Corp. -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <rect x="0" y="0" width="100" height="100" />
+            </svg>
+            """;
+
+        var doc = await Handler.Handle(new ImportSvgCommand(svg));
+
+        Assert.HasCount(1, doc.PrologComments);
+        Assert.Contains("Copyright 2024 Example Corp.", doc.PrologComments[0]);
+    }
+
+    [TestMethod]
+    public async Task Handle_NoComments_ElementsUnaffected()
+    {
+        const string svg = """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <rect x="0" y="0" width="100" height="100" />
+                <circle cx="50" cy="50" r="25" />
+            </svg>
+            """;
+
+        var doc = await Handler.Handle(new ImportSvgCommand(svg));
+
+        Assert.IsEmpty(doc.PrologComments);
+        Assert.IsEmpty(doc.Elements.OfType<SvgEditor.Web.Features.Canvas.Models.SvgComment>());
+        Assert.HasCount(2, doc.Elements);
+    }
 }

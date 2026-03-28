@@ -28,15 +28,24 @@ public sealed class ExportSvgHandler : IRequestHandler<ExportSvgCommand, string>
             root.Add(ElementToXml(element));
         }
 
-        var xDoc = new XDocument(
-            new XDeclaration("1.0", "utf-8", null),
-            root);
+        var xDoc = new XDocument(new XDeclaration("1.0", "utf-8", null));
+
+        // Re-emit prolog comments that appeared before the root <svg> element
+        foreach (var commentText in doc.PrologComments)
+        {
+            xDoc.Add(new XComment(commentText));
+        }
+
+        xDoc.Add(root);
 
         return Task.FromResult(xDoc.ToString());
     }
 
-    private static XElement ElementToXml(SvgElement element)
+    private static XNode ElementToXml(SvgElement element)
     {
+        if (element is SvgComment comment)
+            return new XComment(comment.Text);
+
         var el = new XElement(SvgNs + element.Tag);
 
         foreach (var (key, value) in element.Attributes)
