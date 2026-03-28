@@ -75,4 +75,10 @@ public sealed record AddArrowBetweenSelectionCommand : SvgCommand
 
     [JsonPropertyName("strokeDashArray")]
     public string? StrokeDashArray { get; init; }
+
+    [JsonPropertyName("sourceAnchor")]
+    public string? SourceAnchor { get; init; }
+
+    [JsonPropertyName("targetAnchor")]
+    public string? TargetAnchor { get; init; }
 }

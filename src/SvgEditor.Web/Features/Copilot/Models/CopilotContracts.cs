@@ -120,6 +120,12 @@ public sealed record CopilotCommand
 
     [JsonPropertyName("strokeDashArray")]
     public string? StrokeDashArray { get; init; }
+
+    [JsonPropertyName("sourceAnchor")]
+    public string? SourceAnchor { get; init; }
+
+    [JsonPropertyName("targetAnchor")]
+    public string? TargetAnchor { get; init; }
 }
 
 public sealed record CopilotApplyRequest

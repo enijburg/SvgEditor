@@ -440,4 +440,65 @@ public sealed class CommandValidationServiceTests
         Assert.IsFalse(result.IsValid);
         Assert.IsTrue(result.Issues.Any(i => i.Contains("negative")));
     }
+
+    [TestMethod]
+    public void Validate_AddArrowWithValidAnchors_ReturnsValid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                SourceAnchor = "border",
+                TargetAnchor = "center"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.IsEmpty(result.Issues);
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithInvalidSourceAnchor_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                SourceAnchor = "invalid"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("sourceAnchor")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithInvalidTargetAnchor_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                TargetAnchor = "edge"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("targetAnchor")));
+    }
 }

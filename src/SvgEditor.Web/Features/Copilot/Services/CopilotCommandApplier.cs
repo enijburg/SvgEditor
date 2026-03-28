@@ -102,7 +102,7 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
                 break;
 
             case "AddArrowBetweenSelection" when command.SourceElementId is not null && command.TargetElementId is not null:
-                ApplyAddArrowBetweenSelection(command.SourceElementId, command.TargetElementId, command.Stroke, command.Width, command.StrokeDashArray);
+                ApplyAddArrowBetweenSelection(command.SourceElementId, command.TargetElementId, command.Stroke, command.Width, command.StrokeDashArray, command.SourceAnchor, command.TargetAnchor);
                 break;
         }
     }
@@ -114,24 +114,50 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         string arrowId,
         string? stroke = null,
         string? strokeWidth = null,
-        string? strokeDashArray = null)
+        string? strokeDashArray = null,
+        string? sourceAnchor = null,
+        string? targetAnchor = null)
     {
         var inv = CultureInfo.InvariantCulture;
         var arrowStroke = stroke ?? DefaultArrowColor;
         var arrowStrokeWidth = strokeWidth ?? DefaultArrowStrokeWidth;
 
         // Compute center points of source and target elements
-        var sx = sourceBBox.X + (sourceBBox.Width / 2);
-        var sy = sourceBBox.Y + (sourceBBox.Height / 2);
-        var tx = targetBBox.X + (targetBBox.Width / 2);
-        var ty = targetBBox.Y + (targetBBox.Height / 2);
+        var scx = sourceBBox.X + (sourceBBox.Width / 2);
+        var scy = sourceBBox.Y + (sourceBBox.Height / 2);
+        var tcx = targetBBox.X + (targetBBox.Width / 2);
+        var tcy = targetBBox.Y + (targetBBox.Height / 2);
+
+        // Resolve anchor modes (default to "border")
+        var srcAnchor = string.Equals(sourceAnchor, "center", StringComparison.OrdinalIgnoreCase) ? "center" : "border";
+        var tgtAnchor = string.Equals(targetAnchor, "center", StringComparison.OrdinalIgnoreCase) ? "center" : "border";
+
+        // Compute start/end points based on anchor modes
+        double sx, sy, tx, ty;
+        if (srcAnchor == "border")
+        {
+            (sx, sy) = ComputeBorderIntersection(sourceBBox, scx, scy, tcx, tcy);
+        }
+        else
+        {
+            (sx, sy) = (scx, scy);
+        }
+
+        if (tgtAnchor == "border")
+        {
+            (tx, ty) = ComputeBorderIntersection(targetBBox, tcx, tcy, scx, scy);
+        }
+        else
+        {
+            (tx, ty) = (tcx, tcy);
+        }
 
         // Compute perpendicular offset for the arc control point
         var dx = tx - sx;
         var dy = ty - sy;
         var dist = Math.Sqrt((dx * dx) + (dy * dy));
 
-        // Arc height is proportional to the distance between centers (clamped to a minimum)
+        // Arc height is proportional to the distance between endpoints (clamped to a minimum)
         var arcOffset = Math.Max(dist * ArcOffsetRatio, MinimumArcOffset);
 
         // Perpendicular direction (rotate 90 degrees)
@@ -187,7 +213,70 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         return (defs, arrow);
     }
 
-    private void ApplyAddArrowBetweenSelection(string sourceElementId, string targetElementId, string? stroke = null, double? strokeWidth = null, string? strokeDashArray = null)
+    /// <summary>
+    /// Computes the point on the border of a bounding box where a ray from
+    /// the box center toward the target point exits the box.
+    /// </summary>
+    public static (double X, double Y) ComputeBorderIntersection(
+        BoundingBox bbox, double fromX, double fromY, double toX, double toY)
+    {
+        var dx = toX - fromX;
+        var dy = toY - fromY;
+
+        // If direction is zero, return center
+        if (Math.Abs(dx) < 0.001 && Math.Abs(dy) < 0.001)
+            return (fromX, fromY);
+
+        var halfW = bbox.Width / 2;
+        var halfH = bbox.Height / 2;
+
+        // Compute t for intersection with each edge
+        // We want the smallest positive t that gives a point on the box edge
+        var t = double.MaxValue;
+
+        // Right edge (x = fromX + halfW) when dx > 0
+        if (dx > 0)
+        {
+            var tCandidate = halfW / dx;
+            var yAt = dy * tCandidate;
+            if (Math.Abs(yAt) <= halfH)
+                t = Math.Min(t, tCandidate);
+        }
+
+        // Left edge (x = fromX - halfW) when dx < 0
+        if (dx < 0)
+        {
+            var tCandidate = -halfW / dx;
+            var yAt = dy * tCandidate;
+            if (Math.Abs(yAt) <= halfH)
+                t = Math.Min(t, tCandidate);
+        }
+
+        // Bottom edge (y = fromY + halfH) when dy > 0
+        if (dy > 0)
+        {
+            var tCandidate = halfH / dy;
+            var xAt = dx * tCandidate;
+            if (Math.Abs(xAt) <= halfW)
+                t = Math.Min(t, tCandidate);
+        }
+
+        // Top edge (y = fromY - halfH) when dy < 0
+        if (dy < 0)
+        {
+            var tCandidate = -halfH / dy;
+            var xAt = dx * tCandidate;
+            if (Math.Abs(xAt) <= halfW)
+                t = Math.Min(t, tCandidate);
+        }
+
+        if (t >= double.MaxValue)
+            return (fromX, fromY);
+
+        return (fromX + (dx * t), fromY + (dy * t));
+    }
+
+    private void ApplyAddArrowBetweenSelection(string sourceElementId, string targetElementId, string? stroke = null, double? strokeWidth = null, string? strokeDashArray = null, string? sourceAnchor = null, string? targetAnchor = null)
     {
         if (editorState.Document is null)
             return;
@@ -206,7 +295,7 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         var arrowId = Guid.NewGuid().ToString();
 
         var strokeWidthStr = strokeWidth?.ToString(CultureInfo.InvariantCulture);
-        var (defs, arrow) = BuildArrowElements(sourceBBox, targetBBox, markerId, arrowId, stroke, strokeWidthStr, strokeDashArray);
+        var (defs, arrow) = BuildArrowElements(sourceBBox, targetBBox, markerId, arrowId, stroke, strokeWidthStr, strokeDashArray, sourceAnchor, targetAnchor);
 
         // Add defs and arrow path to the document
         var doc = editorState.Document;

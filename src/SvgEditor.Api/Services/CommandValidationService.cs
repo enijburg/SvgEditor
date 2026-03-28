@@ -12,6 +12,11 @@ public sealed partial class CommandValidationService
         "left", "center", "right", "top", "middle", "bottom"
     };
 
+    private static readonly HashSet<string> ValidAnchors = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "border", "center"
+    };
+
     [GeneratedRegex(@"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")]
     private static partial Regex HexColorPattern();
 
@@ -93,6 +98,10 @@ public sealed partial class CommandValidationService
                     issues.Add("Stroke width must not be negative.");
                 if (addArrow.StrokeDashArray is not null)
                     ValidateStrokeDashArray(addArrow.StrokeDashArray, issues);
+                if (addArrow.SourceAnchor is not null && !ValidAnchors.Contains(addArrow.SourceAnchor))
+                    issues.Add($"Invalid sourceAnchor '{addArrow.SourceAnchor}'. Valid values: {string.Join(", ", ValidAnchors)}.");
+                if (addArrow.TargetAnchor is not null && !ValidAnchors.Contains(addArrow.TargetAnchor))
+                    issues.Add($"Invalid targetAnchor '{addArrow.TargetAnchor}'. Valid values: {string.Join(", ", ValidAnchors)}.");
 
                 break;
 

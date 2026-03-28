@@ -233,9 +233,47 @@ public sealed class CopilotCommandApplierTests
         Assert.AreEqual("test-arrow", arrow.Id);
         Assert.AreEqual("url(#test-marker)", arrow.Attributes["marker-end"]);
 
-        // Path should start at source center (100, 80) and end at target center (350, 230)
+        // Default anchor is "border" — path starts at source border (150, 110) and ends at target border (300, 200)
+        Assert.Contains("M 150 110", arrow.D, StringComparison.Ordinal);
+        Assert.Contains("300 200", arrow.D, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void BuildArrowElements_CenterAnchor_UsesElementCenters()
+    {
+        var sourceBBox = new BoundingBox(50, 50, 100, 60);
+        var targetBBox = new BoundingBox(300, 200, 100, 60);
+
+        var (_, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "test-marker", "test-arrow",
+            sourceAnchor: "center", targetAnchor: "center");
+
+        // Center-to-center: source center (100, 80), target center (350, 230)
         Assert.Contains("M 100 80", arrow.D, StringComparison.Ordinal);
         Assert.Contains("350 230", arrow.D, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void BuildArrowElements_MixedAnchors_BorderToCenterAndCenterToBorder()
+    {
+        var sourceBBox = new BoundingBox(50, 50, 100, 60);
+        var targetBBox = new BoundingBox(300, 200, 100, 60);
+
+        // Border source → center target
+        var (_, arrow1) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "m1", "a1",
+            sourceAnchor: "border", targetAnchor: "center");
+
+        Assert.Contains("M 150 110", arrow1.D, StringComparison.Ordinal);
+        Assert.Contains("350 230", arrow1.D, StringComparison.Ordinal);
+
+        // Center source → border target
+        var (_, arrow2) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "m2", "a2",
+            sourceAnchor: "center", targetAnchor: "border");
+
+        Assert.Contains("M 100 80", arrow2.D, StringComparison.Ordinal);
+        Assert.Contains("300 200", arrow2.D, StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -318,5 +356,96 @@ public sealed class CopilotCommandApplierTests
         var defs = doc.Elements.OfType<SvgUnknown>().FirstOrDefault(e => e.Tag == "defs");
         Assert.IsNotNull(defs);
         Assert.Contains("fill=\"#000000\"", defs.InnerXml, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void ComputeBorderIntersection_RayToRight_IntersectsRightEdge()
+    {
+        var bbox = new BoundingBox(0, 0, 200, 100);
+        // Center = (100, 50), target to the right at (300, 50)
+        var (x, y) = CopilotCommandApplier.ComputeBorderIntersection(bbox, 100, 50, 300, 50);
+
+        Assert.AreEqual(200, x, 0.01); // right edge
+        Assert.AreEqual(50, y, 0.01);  // horizontally centered
+    }
+
+    [TestMethod]
+    public void ComputeBorderIntersection_RayDiagonal_IntersectsCorrectEdge()
+    {
+        var bbox = new BoundingBox(50, 50, 100, 60);
+        // Center = (100, 80), target at (350, 230) → exits right/bottom corner
+        var (x, y) = CopilotCommandApplier.ComputeBorderIntersection(bbox, 100, 80, 350, 230);
+
+        Assert.AreEqual(150, x, 0.01);
+        Assert.AreEqual(110, y, 0.01);
+    }
+
+    [TestMethod]
+    public void ComputeBorderIntersection_RayToLeft_IntersectsLeftEdge()
+    {
+        var bbox = new BoundingBox(200, 100, 100, 60);
+        // Center = (250, 130), target to the left at (0, 130)
+        var (x, y) = CopilotCommandApplier.ComputeBorderIntersection(bbox, 250, 130, 0, 130);
+
+        Assert.AreEqual(200, x, 0.01); // left edge
+        Assert.AreEqual(130, y, 0.01);
+    }
+
+    [TestMethod]
+    public void ComputeBorderIntersection_ZeroDirection_ReturnsCenterPoint()
+    {
+        var bbox = new BoundingBox(50, 50, 100, 60);
+        // fromX == toX, fromY == toY
+        var (x, y) = CopilotCommandApplier.ComputeBorderIntersection(bbox, 100, 80, 100, 80);
+
+        Assert.AreEqual(100, x, 0.01);
+        Assert.AreEqual(80, y, 0.01);
+    }
+
+    [TestMethod]
+    public async Task AddArrowBetweenSelection_BorderAnchor_StartsAtBorder()
+    {
+        var r1 = new SvgRect
+        {
+            Id = "r1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x"] = "50", ["y"] = "50", ["width"] = "100", ["height"] = "60"
+            }
+        };
+        var r2 = new SvgRect
+        {
+            Id = "r2",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x"] = "300", ["y"] = "200", ["width"] = "100", ["height"] = "60"
+            }
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [r1, r2] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand
+            {
+                Type = "AddArrowBetweenSelection",
+                SourceElementId = "r1",
+                TargetElementId = "r2",
+                SourceAnchor = "border",
+                TargetAnchor = "border"
+            }
+        ], "test border arrow");
+
+        var doc = state.Document!;
+        var arrow = doc.Elements.OfType<SvgPath>().FirstOrDefault();
+        Assert.IsNotNull(arrow);
+
+        // Border anchored: should start at source border (150, 110) not center (100, 80)
+        Assert.Contains("M 150 110", arrow.D, StringComparison.Ordinal);
+        // Target border at (300, 200) not center (350, 230)
+        Assert.Contains("300 200", arrow.D, StringComparison.Ordinal);
     }
 }
