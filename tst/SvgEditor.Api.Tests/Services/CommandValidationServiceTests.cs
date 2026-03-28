@@ -501,4 +501,30 @@ public sealed class CommandValidationServiceTests
         Assert.IsFalse(result.IsValid);
         Assert.IsTrue(result.Issues.Any(i => i.Contains("targetAnchor")));
     }
+
+    [TestMethod]
+    public void Validate_AddArrowWithDirectionalAnchors_ReturnsValid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var anchors = new[] { "left", "right", "top", "bottom" };
+
+        foreach (var anchor in anchors)
+        {
+            var commands = new List<SvgCommand>
+            {
+                new AddArrowBetweenSelectionCommand
+                {
+                    SourceElementId = "rect-1",
+                    TargetElementId = "rect-2",
+                    SourceAnchor = anchor,
+                    TargetAnchor = anchor
+                }
+            };
+
+            var result = _sut.Validate(commands, context);
+
+            Assert.IsTrue(result.IsValid, $"Anchor '{anchor}' should be valid");
+            Assert.IsEmpty(result.Issues);
+        }
+    }
 }

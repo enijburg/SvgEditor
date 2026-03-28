@@ -14,7 +14,7 @@ public sealed partial class CommandValidationService
 
     private static readonly HashSet<string> ValidAnchors = new(StringComparer.OrdinalIgnoreCase)
     {
-        "border", "center"
+        "border", "center", "left", "right", "top", "bottom"
     };
 
     [GeneratedRegex(@"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")]

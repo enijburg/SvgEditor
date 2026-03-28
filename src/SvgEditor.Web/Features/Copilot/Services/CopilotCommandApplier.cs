@@ -130,28 +130,13 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         var tcy = targetBBox.Y + (targetBBox.Height / 2);
 
         // Resolve anchor modes (default to "border")
-        var srcAnchor = string.Equals(sourceAnchor, "center", StringComparison.OrdinalIgnoreCase) ? "center" : "border";
-        var tgtAnchor = string.Equals(targetAnchor, "center", StringComparison.OrdinalIgnoreCase) ? "center" : "border";
+        var srcAnchorNorm = NormalizeAnchor(sourceAnchor);
+        var tgtAnchorNorm = NormalizeAnchor(targetAnchor);
 
         // Compute start/end points based on anchor modes
         double sx, sy, tx, ty;
-        if (srcAnchor == "border")
-        {
-            (sx, sy) = ComputeBorderIntersection(sourceBBox, scx, scy, tcx, tcy);
-        }
-        else
-        {
-            (sx, sy) = (scx, scy);
-        }
-
-        if (tgtAnchor == "border")
-        {
-            (tx, ty) = ComputeBorderIntersection(targetBBox, tcx, tcy, scx, scy);
-        }
-        else
-        {
-            (tx, ty) = (tcx, tcy);
-        }
+        (sx, sy) = ResolveAnchorPoint(sourceBBox, scx, scy, tcx, tcy, srcAnchorNorm);
+        (tx, ty) = ResolveAnchorPoint(targetBBox, tcx, tcy, scx, scy, tgtAnchorNorm);
 
         // Compute perpendicular offset for the arc control point
         var dx = tx - sx;
@@ -275,6 +260,42 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
             return (fromX, fromY);
 
         return (fromX + (dx * t), fromY + (dy * t));
+    }
+
+    /// <summary>
+    /// Normalizes an anchor string to a canonical lowercase value.
+    /// Unrecognized values default to "border".
+    /// </summary>
+    public static string NormalizeAnchor(string? anchor)
+    {
+        if (string.IsNullOrWhiteSpace(anchor))
+            return "border";
+
+        return anchor.ToLowerInvariant() switch
+        {
+            "center" or "left" or "right" or "top" or "bottom" => anchor.ToLowerInvariant(),
+            _ => "border"
+        };
+    }
+
+    /// <summary>
+    /// Resolves the connection point for an anchor on the given bounding box.
+    /// For directional anchors (left, right, top, bottom) returns the midpoint of the named edge.
+    /// For "border" computes the intersection of a center-to-center ray with the box edge.
+    /// For "center" returns the center of the box.
+    /// </summary>
+    public static (double X, double Y) ResolveAnchorPoint(
+        BoundingBox bbox, double centerX, double centerY, double otherCenterX, double otherCenterY, string anchor)
+    {
+        return anchor switch
+        {
+            "left" => (bbox.X, centerY),
+            "right" => (bbox.X + bbox.Width, centerY),
+            "top" => (centerX, bbox.Y),
+            "bottom" => (centerX, bbox.Y + bbox.Height),
+            "center" => (centerX, centerY),
+            _ => ComputeBorderIntersection(bbox, centerX, centerY, otherCenterX, otherCenterY) // "border"
+        };
     }
 
     private void ApplyAddArrowBetweenSelection(string sourceElementId, string targetElementId, string? stroke = null, double? strokeWidth = null, string? strokeDashArray = null, string? sourceAnchor = null, string? targetAnchor = null)

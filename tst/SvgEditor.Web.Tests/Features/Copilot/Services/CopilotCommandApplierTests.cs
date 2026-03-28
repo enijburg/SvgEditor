@@ -448,4 +448,118 @@ public sealed class CopilotCommandApplierTests
         // Target border at (300, 200) not center (350, 230)
         Assert.Contains("300 200", arrow.D, StringComparison.Ordinal);
     }
+
+    [TestMethod]
+    public void BuildArrowElements_RightAnchor_StartsFromRightEdge()
+    {
+        var sourceBBox = new BoundingBox(50, 50, 100, 60);  // right edge x = 150
+        var targetBBox = new BoundingBox(300, 200, 100, 60);
+
+        var (_, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "m1", "a1",
+            sourceAnchor: "right", targetAnchor: "border");
+
+        // Source right edge midpoint: (150, 80)
+        Assert.Contains("M 150 80", arrow.D, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void BuildArrowElements_LeftAnchor_StartsFromLeftEdge()
+    {
+        var sourceBBox = new BoundingBox(300, 200, 100, 60);  // left edge x = 300
+        var targetBBox = new BoundingBox(50, 50, 100, 60);
+
+        var (_, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "m1", "a1",
+            sourceAnchor: "left", targetAnchor: "border");
+
+        // Source left edge midpoint: (300, 230)
+        Assert.Contains("M 300 230", arrow.D, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void BuildArrowElements_TopAnchor_StartsFromTopEdge()
+    {
+        var sourceBBox = new BoundingBox(50, 200, 100, 60);  // top edge y = 200
+        var targetBBox = new BoundingBox(50, 50, 100, 60);
+
+        var (_, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "m1", "a1",
+            sourceAnchor: "top", targetAnchor: "border");
+
+        // Source top edge midpoint: (100, 200)
+        Assert.Contains("M 100 200", arrow.D, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void BuildArrowElements_BottomAnchor_StartsFromBottomEdge()
+    {
+        var sourceBBox = new BoundingBox(50, 50, 100, 60);  // bottom edge y = 110
+        var targetBBox = new BoundingBox(50, 300, 100, 60);
+
+        var (_, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "m1", "a1",
+            sourceAnchor: "bottom", targetAnchor: "border");
+
+        // Source bottom edge midpoint: (100, 110)
+        Assert.Contains("M 100 110", arrow.D, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void BuildArrowElements_DirectionalAnchors_RightToLeft()
+    {
+        var sourceBBox = new BoundingBox(50, 50, 100, 60);   // right edge x=150, cy=80
+        var targetBBox = new BoundingBox(300, 50, 100, 60);  // left edge x=300, cy=80
+
+        var (_, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "m1", "a1",
+            sourceAnchor: "right", targetAnchor: "left");
+
+        // Source right midpoint: (150, 80), target left midpoint: (300, 80)
+        Assert.Contains("M 150 80", arrow.D, StringComparison.Ordinal);
+        Assert.Contains("300 80", arrow.D, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void ResolveAnchorPoint_AllDirections_ReturnCorrectEdgeMidpoints()
+    {
+        var bbox = new BoundingBox(100, 200, 80, 40);
+        // center = (140, 220), left edge x=100, right edge x=180, top y=200, bottom y=240
+
+        var (lx, ly) = CopilotCommandApplier.ResolveAnchorPoint(bbox, 140, 220, 0, 0, "left");
+        Assert.AreEqual(100, lx, 0.01);
+        Assert.AreEqual(220, ly, 0.01);
+
+        var (rx, ry) = CopilotCommandApplier.ResolveAnchorPoint(bbox, 140, 220, 0, 0, "right");
+        Assert.AreEqual(180, rx, 0.01);
+        Assert.AreEqual(220, ry, 0.01);
+
+        var (tx, ty) = CopilotCommandApplier.ResolveAnchorPoint(bbox, 140, 220, 0, 0, "top");
+        Assert.AreEqual(140, tx, 0.01);
+        Assert.AreEqual(200, ty, 0.01);
+
+        var (bx, by) = CopilotCommandApplier.ResolveAnchorPoint(bbox, 140, 220, 0, 0, "bottom");
+        Assert.AreEqual(140, bx, 0.01);
+        Assert.AreEqual(240, by, 0.01);
+
+        var (cx, cy) = CopilotCommandApplier.ResolveAnchorPoint(bbox, 140, 220, 0, 0, "center");
+        Assert.AreEqual(140, cx, 0.01);
+        Assert.AreEqual(220, cy, 0.01);
+    }
+
+    [TestMethod]
+    public void NormalizeAnchor_ValidValues_ReturnsLowercase()
+    {
+        Assert.AreEqual("border", CopilotCommandApplier.NormalizeAnchor(null));
+        Assert.AreEqual("border", CopilotCommandApplier.NormalizeAnchor(""));
+        Assert.AreEqual("border", CopilotCommandApplier.NormalizeAnchor("border"));
+        Assert.AreEqual("border", CopilotCommandApplier.NormalizeAnchor("Border"));
+        Assert.AreEqual("center", CopilotCommandApplier.NormalizeAnchor("center"));
+        Assert.AreEqual("center", CopilotCommandApplier.NormalizeAnchor("Center"));
+        Assert.AreEqual("left", CopilotCommandApplier.NormalizeAnchor("left"));
+        Assert.AreEqual("right", CopilotCommandApplier.NormalizeAnchor("Right"));
+        Assert.AreEqual("top", CopilotCommandApplier.NormalizeAnchor("TOP"));
+        Assert.AreEqual("bottom", CopilotCommandApplier.NormalizeAnchor("Bottom"));
+        Assert.AreEqual("border", CopilotCommandApplier.NormalizeAnchor("invalid"));
+    }
 }
