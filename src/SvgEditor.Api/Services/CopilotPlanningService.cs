@@ -243,6 +243,34 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
                 }),
 
             AIFunctionFactory.Create(
+                ([Description("The element ID where the arrow starts from")] string sourceElementId,
+                 [Description("The element ID where the arrow points to")] string targetElementId,
+                 [Description("Optional stroke color as hex (e.g. #000000). Default is #333333")] string? stroke = null,
+                 [Description("Optional stroke width in pixels. Default is 2")] double? strokeWidth = null,
+                 [Description("Optional SVG stroke-dasharray value for dashed lines (e.g. '8 4' for dashes of 8px with 4px gaps)")] string? strokeDashArray = null,
+                 [Description("Where the arrow starts: 'border' (auto-detect edge, default), 'left', 'right', 'top', 'bottom' (midpoint of that edge), or 'center' (element center)")] string? sourceAnchor = null,
+                 [Description("Where the arrow ends: 'border' (auto-detect edge, default), 'left', 'right', 'top', 'bottom' (midpoint of that edge), or 'center' (element center)")] string? targetAnchor = null) =>
+                {
+                    commands.Add(new AddArrowBetweenSelectionCommand
+                    {
+                        SourceElementId = sourceElementId,
+                        TargetElementId = targetElementId,
+                        Stroke = stroke,
+                        StrokeWidth = strokeWidth,
+                        StrokeDashArray = strokeDashArray,
+                        SourceAnchor = sourceAnchor,
+                        TargetAnchor = targetAnchor,
+                    });
+                    return $"Added arched arrow from {sourceElementId} to {targetElementId}";
+                },
+                new AIFunctionFactoryOptions
+                {
+                    Name = "add_arrow_between_selection",
+                    Description = "Create an arched arrow from source to target element. Supports stroke color/width/dash and anchor modes: 'border' (auto-detect edge, default), 'left'/'right'/'top'/'bottom' (midpoint of that edge), or 'center'. Use the first selected element as source and the last as target.",
+                    AdditionalProperties = skipPermission,
+                }),
+
+            AIFunctionFactory.Create(
                 () =>
                 {
                     return JsonSerializer.Serialize(new
@@ -297,7 +325,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             You are an SVG editor assistant. The user will describe edits they want to make to an SVG document.
             You MUST use the provided tools to execute the edits. Do NOT output raw SVG or code.
 
-            Available tools: set_fill, set_stroke, move_element, move_selection, align_selection, get_selection, get_document_summary.
+            Available tools: set_fill, set_stroke, move_element, move_selection, align_selection, add_arrow_between_selection, get_selection, get_document_summary.
 
             Current document state:
             - Canvas size: {context.Canvas.Width}x{context.Canvas.Height}
@@ -310,6 +338,10 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             - For color values, use hex format (#RRGGBB). Convert named colors to hex.
             - When the user says "the selected element" or similar, use the selected element IDs.
             - For move commands on all selected elements, use move_selection instead of move_element.
+            - When the user asks to draw an arrow between two selected elements, use add_arrow_between_selection with the first selected element as source and the last as target. Include stroke, strokeWidth, and strokeDashArray parameters directly in the tool call for styling (e.g. dashed arrows). Do NOT use set_stroke on the arrow afterwards.
+            - Arrow anchor modes: use sourceAnchor/targetAnchor to control where the arrow connects. Options: 'border' (auto-detect closest edge, default), 'left', 'right', 'top', 'bottom' (midpoint of that edge), or 'center' (element center).
+            - When the user says "from border to border", use sourceAnchor='border' and targetAnchor='border'.
+            - When a target is to the right of the source, prefer sourceAnchor='right' and targetAnchor='left'. When the user explicitly names a side (e.g. "from the top"), use that side as the anchor.
             - Call the tools first, then provide a brief summary of what you did.
             - Do not use any tools other than the ones listed above.
             """;
@@ -324,6 +356,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             MoveElementCommand m => $"Move {m.ElementId} by ({m.Dx}, {m.Dy})",
             MoveSelectionCommand ms => $"Move selection by ({ms.Dx}, {ms.Dy})",
             AlignSelectionCommand a => $"Align selection {a.Alignment}",
+            AddArrowBetweenSelectionCommand arr => $"Add arched arrow from {arr.SourceElementId} to {arr.TargetElementId}",
             _ => "Unknown command"
         });
         return string.Join(". ", parts) + ".";

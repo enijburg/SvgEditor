@@ -313,4 +313,218 @@ public sealed class CommandValidationServiceTests
         Assert.IsFalse(result.IsValid);
         Assert.IsTrue(result.Issues.Any(i => i.Contains("range")));
     }
+
+    [TestMethod]
+    public void Validate_ValidAddArrowBetweenSelectionCommand_ReturnsValid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand { SourceElementId = "rect-1", TargetElementId = "rect-2" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.IsEmpty(result.Issues);
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowBetweenSelection_UnknownSource_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand { SourceElementId = "nonexistent", TargetElementId = "rect-2" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("not found")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowBetweenSelection_SameSourceAndTarget_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand { SourceElementId = "rect-1", TargetElementId = "rect-1" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("different")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithStyling_ReturnsValid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                Stroke = "#FF0000",
+                StrokeWidth = 3,
+                StrokeDashArray = "8 4"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.IsEmpty(result.Issues);
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithInvalidDashArray_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                StrokeDashArray = "#000000 4 2"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("stroke-dasharray")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithInvalidStrokeColor_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                Stroke = "not-a-color"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("Invalid stroke color")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithNegativeStrokeWidth_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                StrokeWidth = -1
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("negative")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithValidAnchors_ReturnsValid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                SourceAnchor = "border",
+                TargetAnchor = "center"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.IsEmpty(result.Issues);
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithInvalidSourceAnchor_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                SourceAnchor = "invalid"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("sourceAnchor")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithInvalidTargetAnchor_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand
+            {
+                SourceElementId = "rect-1",
+                TargetElementId = "rect-2",
+                TargetAnchor = "edge"
+            }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("targetAnchor")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowWithDirectionalAnchors_ReturnsValid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var anchors = new[] { "left", "right", "top", "bottom" };
+
+        foreach (var anchor in anchors)
+        {
+            var commands = new List<SvgCommand>
+            {
+                new AddArrowBetweenSelectionCommand
+                {
+                    SourceElementId = "rect-1",
+                    TargetElementId = "rect-2",
+                    SourceAnchor = anchor,
+                    TargetAnchor = anchor
+                }
+            };
+
+            var result = _sut.Validate(commands, context);
+
+            Assert.IsTrue(result.IsValid, $"Anchor '{anchor}' should be valid");
+            Assert.IsEmpty(result.Issues);
+        }
+    }
 }

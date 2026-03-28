@@ -111,6 +111,21 @@ public sealed record CopilotCommand
 
     [JsonPropertyName("alignment")]
     public string? Alignment { get; init; }
+
+    [JsonPropertyName("sourceElementId")]
+    public string? SourceElementId { get; init; }
+
+    [JsonPropertyName("targetElementId")]
+    public string? TargetElementId { get; init; }
+
+    [JsonPropertyName("strokeDashArray")]
+    public string? StrokeDashArray { get; init; }
+
+    [JsonPropertyName("sourceAnchor")]
+    public string? SourceAnchor { get; init; }
+
+    [JsonPropertyName("targetAnchor")]
+    public string? TargetAnchor { get; init; }
 }
 
 public sealed record CopilotApplyRequest

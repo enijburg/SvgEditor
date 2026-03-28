@@ -8,6 +8,7 @@ namespace SvgEditor.Api.Contracts;
 [JsonDerivedType(typeof(MoveElementCommand), "MoveElement")]
 [JsonDerivedType(typeof(MoveSelectionCommand), "MoveSelection")]
 [JsonDerivedType(typeof(AlignSelectionCommand), "AlignSelection")]
+[JsonDerivedType(typeof(AddArrowBetweenSelectionCommand), "AddArrowBetweenSelection")]
 public abstract record SvgCommand;
 
 public sealed record SetFillCommand : SvgCommand
@@ -56,4 +57,28 @@ public sealed record AlignSelectionCommand : SvgCommand
 {
     [JsonPropertyName("alignment")]
     public required string Alignment { get; init; }
+}
+
+public sealed record AddArrowBetweenSelectionCommand : SvgCommand
+{
+    [JsonPropertyName("sourceElementId")]
+    public required string SourceElementId { get; init; }
+
+    [JsonPropertyName("targetElementId")]
+    public required string TargetElementId { get; init; }
+
+    [JsonPropertyName("stroke")]
+    public string? Stroke { get; init; }
+
+    [JsonPropertyName("strokeWidth")]
+    public double? StrokeWidth { get; init; }
+
+    [JsonPropertyName("strokeDashArray")]
+    public string? StrokeDashArray { get; init; }
+
+    [JsonPropertyName("sourceAnchor")]
+    public string? SourceAnchor { get; init; }
+
+    [JsonPropertyName("targetAnchor")]
+    public string? TargetAnchor { get; init; }
 }

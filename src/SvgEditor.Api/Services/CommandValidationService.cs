@@ -12,6 +12,11 @@ public sealed partial class CommandValidationService
         "left", "center", "right", "top", "middle", "bottom"
     };
 
+    private static readonly HashSet<string> ValidAnchors = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "border", "center", "left", "right", "top", "bottom"
+    };
+
     [GeneratedRegex(@"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")]
     private static partial Regex HexColorPattern();
 
@@ -77,6 +82,29 @@ public sealed partial class CommandValidationService
                     issues.Add($"Invalid alignment '{alignSelection.Alignment}'. Valid values: {string.Join(", ", ValidAlignments)}.");
                 break;
 
+            case AddArrowBetweenSelectionCommand addArrow:
+                ValidateElementId(addArrow.SourceElementId, knownElementIds, issues);
+                ValidateElementId(addArrow.TargetElementId, knownElementIds, issues);
+                if (!string.IsNullOrWhiteSpace(addArrow.SourceElementId) &&
+                    !string.IsNullOrWhiteSpace(addArrow.TargetElementId) &&
+                    string.Equals(addArrow.SourceElementId, addArrow.TargetElementId, StringComparison.Ordinal))
+                {
+                    issues.Add("Source and target element must be different.");
+                }
+
+                if (addArrow.Stroke is not null)
+                    ValidateColor(addArrow.Stroke, "Stroke", issues);
+                if (addArrow.StrokeWidth is < 0)
+                    issues.Add("Stroke width must not be negative.");
+                if (addArrow.StrokeDashArray is not null)
+                    ValidateStrokeDashArray(addArrow.StrokeDashArray, issues);
+                if (addArrow.SourceAnchor is not null && !ValidAnchors.Contains(addArrow.SourceAnchor))
+                    issues.Add($"Invalid sourceAnchor '{addArrow.SourceAnchor}'. Valid values: {string.Join(", ", ValidAnchors)}.");
+                if (addArrow.TargetAnchor is not null && !ValidAnchors.Contains(addArrow.TargetAnchor))
+                    issues.Add($"Invalid targetAnchor '{addArrow.TargetAnchor}'. Valid values: {string.Join(", ", ValidAnchors)}.");
+
+                break;
+
             default:
                 issues.Add($"Unknown command type: {command.GetType().Name}");
                 break;
@@ -127,6 +155,23 @@ public sealed partial class CommandValidationService
         if (Math.Abs(value) > MaxCoordinateValue)
         {
             issues.Add($"{fieldName} value {value} is out of reasonable range.");
+        }
+    }
+
+    [GeneratedRegex(@"^\d+(\.\d+)?(\s*[,\s]\s*\d+(\.\d+)?)*$")]
+    private static partial Regex StrokeDashArrayPattern();
+
+    private static void ValidateStrokeDashArray(string value, List<string> issues)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            issues.Add("stroke-dasharray must not be empty.");
+            return;
+        }
+
+        if (!StrokeDashArrayPattern().IsMatch(value))
+        {
+            issues.Add($"Invalid stroke-dasharray value '{value}'. Expected space or comma-separated numbers (e.g. '8 4').");
         }
     }
 }
