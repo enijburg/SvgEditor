@@ -186,4 +186,119 @@ public sealed class SvgElementTests
 
         Assert.AreEqual("stroke", line.GetForegroundColorAttribute());
     }
+
+    [TestMethod]
+    public void SvgRect_WithResize_ScalesDimensions()
+    {
+        var rect = new SvgRect { Attributes = new Dictionary<string, string> { ["x"] = "10", ["y"] = "10", ["width"] = "100", ["height"] = "50" } };
+
+        var resized = (SvgRect)rect.WithResize(new BoundingBox(10, 10, 100, 50), new BoundingBox(10, 10, 200, 100));
+
+        Assert.AreEqual(10, resized.X);
+        Assert.AreEqual(10, resized.Y);
+        Assert.AreEqual(200, resized.Width);
+        Assert.AreEqual(100, resized.Height);
+    }
+
+    [TestMethod]
+    public void SvgCircle_WithResize_ScalesRadius()
+    {
+        var circle = new SvgCircle { Attributes = new Dictionary<string, string> { ["cx"] = "50", ["cy"] = "50", ["r"] = "20" } };
+
+        var resized = (SvgCircle)circle.WithResize(new BoundingBox(30, 30, 40, 40), new BoundingBox(30, 30, 80, 80));
+
+        Assert.AreEqual(70, resized.Cx);
+        Assert.AreEqual(70, resized.Cy);
+        Assert.AreEqual(40, resized.R);
+    }
+
+    [TestMethod]
+    public void SvgEllipse_WithResize_ScalesRadii()
+    {
+        var ellipse = new SvgEllipse { Attributes = new Dictionary<string, string> { ["cx"] = "50", ["cy"] = "50", ["rx"] = "30", ["ry"] = "20" } };
+
+        var resized = (SvgEllipse)ellipse.WithResize(new BoundingBox(20, 30, 60, 40), new BoundingBox(20, 30, 120, 80));
+
+        Assert.AreEqual(80, resized.Cx);
+        Assert.AreEqual(70, resized.Cy);
+        Assert.AreEqual(60, resized.Rx);
+        Assert.AreEqual(40, resized.Ry);
+    }
+
+    [TestMethod]
+    public void SvgLine_WithResize_ScalesEndpoints()
+    {
+        var line = new SvgLine { Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100" } };
+
+        var resized = (SvgLine)line.WithResize(new BoundingBox(0, 0, 100, 100), new BoundingBox(0, 0, 200, 200));
+
+        Assert.AreEqual(0, resized.X1);
+        Assert.AreEqual(0, resized.Y1);
+        Assert.AreEqual(200, resized.X2);
+        Assert.AreEqual(200, resized.Y2);
+    }
+
+    [TestMethod]
+    public void SvgImage_WithResize_ScalesDimensions()
+    {
+        var image = new SvgImage { Attributes = new Dictionary<string, string> { ["x"] = "10", ["y"] = "20", ["width"] = "100", ["height"] = "80" } };
+
+        var resized = (SvgImage)image.WithResize(new BoundingBox(10, 20, 100, 80), new BoundingBox(10, 20, 200, 160));
+
+        Assert.AreEqual(10, resized.X);
+        Assert.AreEqual(20, resized.Y);
+        Assert.AreEqual(200, resized.Width);
+        Assert.AreEqual(160, resized.Height);
+    }
+
+    [TestMethod]
+    public void SvgText_WithResize_ScalesFontSize()
+    {
+        var text = new SvgText { Attributes = new Dictionary<string, string> { ["x"] = "0", ["y"] = "16", ["font-size"] = "16" }, Content = "Hello" };
+
+        var resized = (SvgText)text.WithResize(new BoundingBox(0, 0, 40, 16), new BoundingBox(0, 0, 80, 32));
+
+        Assert.AreEqual("32", resized.Attributes["font-size"]);
+    }
+
+    [TestMethod]
+    public void SvgPolygon_WithResize_ScalesPoints()
+    {
+        var polygon = new SvgPolygon { Attributes = new Dictionary<string, string> { ["points"] = "0,0 100,0 100,100 0,100" } };
+
+        var resized = (SvgPolygon)polygon.WithResize(new BoundingBox(0, 0, 100, 100), new BoundingBox(0, 0, 200, 200));
+
+        Assert.AreEqual("0,0 200,0 200,200 0,200", resized.Points);
+    }
+
+    [TestMethod]
+    public void SvgPolyline_WithResize_ScalesPoints()
+    {
+        var polyline = new SvgPolyline { Attributes = new Dictionary<string, string> { ["points"] = "0,0 50,0 50,50" } };
+
+        var resized = (SvgPolyline)polyline.WithResize(new BoundingBox(0, 0, 50, 50), new BoundingBox(0, 0, 100, 100));
+
+        Assert.AreEqual("0,0 100,0 100,100", resized.Points);
+    }
+
+    [TestMethod]
+    public void SvgGroup_WithResize_ResizesChildren()
+    {
+        var group = new SvgGroup
+        {
+            Attributes = [],
+            Children =
+            [
+                new SvgRect { Attributes = new Dictionary<string, string> { ["x"] = "0", ["y"] = "0", ["width"] = "50", ["height"] = "50" } },
+            ]
+        };
+
+        var resized = (SvgGroup)group.WithResize(new BoundingBox(0, 0, 50, 50), new BoundingBox(0, 0, 100, 100));
+
+        var resizedRect = (SvgRect)resized.Children[0];
+        Assert.AreEqual(0, resizedRect.X);
+        Assert.AreEqual(0, resizedRect.Y);
+        Assert.AreEqual(100, resizedRect.Width);
+        Assert.AreEqual(100, resizedRect.Height);
+    }
 }

@@ -3,6 +3,8 @@ window.svgEditorCanvas = (function () {
     let svgElement = null;
     let isDragging = false;
     let isFencing = false;
+    let isResizing = false;
+    let resizeHandle = null;
     let lastSvgPoint = null;
 
     function getSvgPoint(evt) {
@@ -16,6 +18,21 @@ window.svgEditorCanvas = (function () {
 
     function onMouseDown(evt) {
         let target = evt.target;
+
+        // Check if the click is on a resize handle
+        if (target.getAttribute && target.getAttribute('data-resize-handle')) {
+            evt.preventDefault();
+            isResizing = true;
+            isDragging = false;
+            isFencing = false;
+            resizeHandle = target.getAttribute('data-resize-handle');
+            lastSvgPoint = getSvgPoint(evt);
+            dotNetRef.invokeMethodAsync('OnResizeHandleMouseDown', resizeHandle,
+                lastSvgPoint ? lastSvgPoint.x : 0,
+                lastSvgPoint ? lastSvgPoint.y : 0);
+            return;
+        }
+
         // Walk up from the click target to find the nearest element with a data-element-id.
         // Elements inside raw markup (e.g. <defs> children) won't have one,
         // so we skip them until we reach a managed element or the SVG root.
@@ -59,7 +76,7 @@ window.svgEditorCanvas = (function () {
     }
 
     function onMouseMove(evt) {
-        if (!isDragging && !isFencing) return;
+        if (!isDragging && !isFencing && !isResizing) return;
         if (!lastSvgPoint) return;
         evt.preventDefault();
         const pt = getSvgPoint(evt);
@@ -67,18 +84,29 @@ window.svgEditorCanvas = (function () {
         const dx = pt.x - lastSvgPoint.x;
         const dy = pt.y - lastSvgPoint.y;
         lastSvgPoint = pt;
-        dotNetRef.invokeMethodAsync('OnMouseMove', dx, dy, pt.x, pt.y);
+        if (isResizing) {
+            dotNetRef.invokeMethodAsync('OnResizeMouseMove', dx, dy, pt.x, pt.y);
+        } else {
+            dotNetRef.invokeMethodAsync('OnMouseMove', dx, dy, pt.x, pt.y);
+        }
     }
 
     function onMouseUp(evt) {
-        if (!isDragging && !isFencing) return;
+        if (!isDragging && !isFencing && !isResizing) return;
         const pt = getSvgPoint(evt);
+        const wasResizing = isResizing;
         isDragging = false;
         isFencing = false;
+        isResizing = false;
+        resizeHandle = null;
         lastSvgPoint = null;
-        dotNetRef.invokeMethodAsync('OnMouseUp',
-            pt ? pt.x : 0,
-            pt ? pt.y : 0);
+        if (wasResizing) {
+            dotNetRef.invokeMethodAsync('OnResizeMouseUp');
+        } else {
+            dotNetRef.invokeMethodAsync('OnMouseUp',
+                pt ? pt.x : 0,
+                pt ? pt.y : 0);
+        }
     }
 
     function onKeyDown(evt) {
@@ -115,6 +143,8 @@ window.svgEditorCanvas = (function () {
             dotNetRef = null;
             isDragging = false;
             isFencing = false;
+            isResizing = false;
+            resizeHandle = null;
             lastSvgPoint = null;
         }
     };

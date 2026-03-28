@@ -13,6 +13,9 @@ public sealed class SvgPolyline : SvgElement
     public override SvgElement WithOffset(double dx, double dy) =>
         new SvgPolyline { Id = Id, Attributes = new Dictionary<string, string>(Attributes) { ["points"] = TranslatePoints(Points, dx, dy) } };
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated) =>
+        new SvgPolyline { Id = Id, Attributes = new Dictionary<string, string>(Attributes) { ["points"] = SvgPolygon.ScalePoints(Points, original, updated) } };
+
     public override SvgElement DeepClone() => new SvgPolyline { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
     public override BoundingBox? GetBoundingBox() => SvgPolygon.ComputePointsBoundingBox(Points);

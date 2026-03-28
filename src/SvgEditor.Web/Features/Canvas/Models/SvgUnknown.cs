@@ -16,6 +16,8 @@ public sealed class SvgUnknown(string tag) : SvgElement
         return new SvgUnknown(tag) { Id = Id, Attributes = attrs, InnerXml = InnerXml };
     }
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated) => this;
+
     public override SvgElement DeepClone() => new SvgUnknown(tag)
     {
         Id = Id,

@@ -1,27 +1,82 @@
 @using SvgEditor.Web.Features.Canvas.Models
 
-@foreach (var element in Elements)
+@if (Elements.Count > 0)
 {
-    var bb = element.GetBoundingBox();
-    if (bb is null) continue;
+    var combinedBb = GetCombinedBoundingBox();
+    if (combinedBb is not null)
+    {
+        var bx = combinedBb.X - Padding;
+        var by = combinedBb.Y - Padding;
+        var bw = combinedBb.Width + Padding * 2;
+        var bh = combinedBb.Height + Padding * 2;
 
-    <rect x="@F(bb.X - Padding)"
-          y="@F(bb.Y - Padding)"
-          width="@F(bb.Width + Padding * 2)"
-          height="@F(bb.Height + Padding * 2)"
-          fill="none"
-          stroke="#0d6efd"
-          stroke-width="1.5"
-          stroke-dasharray="6,3"
-          pointer-events="none" />
+        <rect x="@F(bx)"
+              y="@F(by)"
+              width="@F(bw)"
+              height="@F(bh)"
+              fill="none"
+              stroke="#0d6efd"
+              stroke-width="1.5"
+              stroke-dasharray="6,3"
+              pointer-events="none" />
+
+        @foreach (var (hx, hy, cursor) in GetHandlePositions(bx, by, bw, bh))
+        {
+            <rect x="@F(hx - HandleSize / 2)"
+                  y="@F(hy - HandleSize / 2)"
+                  width="@F(HandleSize)"
+                  height="@F(HandleSize)"
+                  fill="white"
+                  stroke="#0d6efd"
+                  stroke-width="1"
+                  data-resize-handle="@cursor"
+                  style="cursor: @(cursor)-resize" />
+        }
+    }
 }
 
 @code {
     private const double Padding = 4;
+    private const double HandleSize = 8;
 
     [Parameter, EditorRequired]
     public IReadOnlyCollection<SvgElement> Elements { get; set; } = [];
 
     private static string F(double value) =>
         value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private BoundingBox? GetCombinedBoundingBox()
+    {
+        double minX = double.MaxValue, minY = double.MaxValue;
+        double maxX = double.MinValue, maxY = double.MinValue;
+        var found = false;
+
+        foreach (var element in Elements)
+        {
+            var bb = element.GetBoundingBox();
+            if (bb is null) continue;
+            minX = Math.Min(minX, bb.X);
+            minY = Math.Min(minY, bb.Y);
+            maxX = Math.Max(maxX, bb.X + bb.Width);
+            maxY = Math.Max(maxY, bb.Y + bb.Height);
+            found = true;
+        }
+
+        return found ? new BoundingBox(minX, minY, maxX - minX, maxY - minY) : null;
+    }
+
+    private static (double x, double y, string cursor)[] GetHandlePositions(double bx, double by, double bw, double bh)
+    {
+        return
+        [
+            (bx, by, "nw"),
+            (bx + bw / 2, by, "n"),
+            (bx + bw, by, "ne"),
+            (bx + bw, by + bh / 2, "e"),
+            (bx + bw, by + bh, "se"),
+            (bx + bw / 2, by + bh, "s"),
+            (bx, by + bh, "sw"),
+            (bx, by + bh / 2, "w"),
+        ];
+    }
 }

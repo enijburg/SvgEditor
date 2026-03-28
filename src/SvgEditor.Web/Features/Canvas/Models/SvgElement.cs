@@ -7,6 +7,7 @@ public abstract class SvgElement
     public Dictionary<string, string> Attributes { get; init; } = [];
 
     public abstract SvgElement WithOffset(double dx, double dy);
+    public abstract SvgElement WithResize(BoundingBox original, BoundingBox updated);
     public abstract SvgElement DeepClone();
     public abstract BoundingBox? GetBoundingBox();
 
@@ -40,4 +41,20 @@ public abstract class SvgElement
 
     internal static string FormatDoubleStatic(double value) =>
         value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    protected static (double X, double Y) MapPoint(double x, double y, BoundingBox original, BoundingBox updated)
+    {
+        var sx = original.Width > 0 ? updated.Width / original.Width : 1;
+        var sy = original.Height > 0 ? updated.Height / original.Height : 1;
+        return (updated.X + (x - original.X) * sx, updated.Y + (y - original.Y) * sy);
+    }
+
+    protected static (double X, double Y, double Width, double Height) MapRect(
+        double x, double y, double w, double h, BoundingBox original, BoundingBox updated)
+    {
+        var (nx, ny) = MapPoint(x, y, original, updated);
+        var sx = original.Width > 0 ? updated.Width / original.Width : 1;
+        var sy = original.Height > 0 ? updated.Height / original.Height : 1;
+        return (nx, ny, Math.Abs(w * sx), Math.Abs(h * sy));
+    }
 }

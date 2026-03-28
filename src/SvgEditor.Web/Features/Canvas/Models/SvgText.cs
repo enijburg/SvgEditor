@@ -28,6 +28,20 @@ public sealed class SvgText : SvgElement
         return new SvgText { Id = Id, Attributes = attrs, Content = Content };
     }
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated)
+    {
+        var (nx, ny) = MapPoint(X, Y, original, updated);
+        var attrs = new Dictionary<string, string>(Attributes)
+        {
+            ["x"] = FormatDouble(nx),
+            ["y"] = FormatDouble(ny)
+        };
+        var fontSize = ParseDouble(Attributes.GetValueOrDefault("font-size"), 16);
+        var sy = original.Height > 0 ? updated.Height / original.Height : 1;
+        attrs["font-size"] = FormatDouble(fontSize * sy);
+        return new SvgText { Id = Id, Attributes = attrs, Content = Content };
+    }
+
     public override SvgElement DeepClone() => new SvgText { Id = Id, Attributes = new Dictionary<string, string>(Attributes), Content = Content };
 
     // Approximate bounding box: 8px per character width, 16px line height (rough estimate for default font size)

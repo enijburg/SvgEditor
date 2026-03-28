@@ -32,6 +32,19 @@ public sealed class SvgCircle : SvgElement
         return new SvgCircle { Id = Id, Attributes = attrs };
     }
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated)
+    {
+        var (nx, ny, nw, nh) = MapRect(Cx - R, Cy - R, R * 2, R * 2, original, updated);
+        var nr = Math.Min(nw, nh) / 2;
+        var attrs = new Dictionary<string, string>(Attributes)
+        {
+            ["cx"] = FormatDouble(nx + nw / 2),
+            ["cy"] = FormatDouble(ny + nh / 2),
+            ["r"] = FormatDouble(nr)
+        };
+        return new SvgCircle { Id = Id, Attributes = attrs };
+    }
+
     public override SvgElement DeepClone() => new SvgCircle { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
     public override BoundingBox? GetBoundingBox() => new BoundingBox(Cx - R, Cy - R, R * 2, R * 2);

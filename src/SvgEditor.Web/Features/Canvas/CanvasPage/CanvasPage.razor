@@ -1,6 +1,7 @@
 @page "/"
 @using Microsoft.JSInterop
 @using SvgEditor.Web.Features.Canvas.Models
+@using SvgEditor.Web.Features.Canvas.ResizeElement
 @using SvgEditor.Web.Features.Canvas.SelectElement
 @using SvgEditor.Web.Features.Canvas.UpdateElement
 @using SvgEditor.Web.Features.History.PushHistory
@@ -64,6 +65,8 @@
     private (double x, double y, double w, double h)? _fenceRect;
     private double _fenceStartX;
     private double _fenceStartY;
+    private string? _resizeHandle;
+    private BoundingBox? _resizeOriginalBounds;
 
     protected override async Task OnInitializedAsync()
     {
@@ -222,6 +225,93 @@
         _dragElementId = null;
         _isFencing = false;
         _fenceRect = null;
+    }
+
+    [JSInvokable]
+    public Task OnResizeHandleMouseDown(string handle, double svgX, double svgY)
+    {
+        _historyPushed = false;
+        _resizeHandle = handle;
+        _resizeOriginalBounds = GetSelectionBoundingBox();
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public async Task OnResizeMouseMove(double dx, double dy, double svgX, double svgY)
+    {
+        if (_resizeHandle is null || _resizeOriginalBounds is null) return;
+
+        if (!_historyPushed)
+        {
+            _historyPushed = true;
+            await Mediator.Send(new PushHistoryCommand("Resize"));
+        }
+
+        var ob = _resizeOriginalBounds;
+        var newX = ob.X;
+        var newY = ob.Y;
+        var newW = ob.Width;
+        var newH = ob.Height;
+
+        if (_resizeHandle.Contains('e'))
+        {
+            newW += dx;
+        }
+        if (_resizeHandle.Contains('w'))
+        {
+            newX += dx;
+            newW -= dx;
+        }
+        if (_resizeHandle.Contains('s'))
+        {
+            newH += dy;
+        }
+        if (_resizeHandle.Contains('n'))
+        {
+            newY += dy;
+            newH -= dy;
+        }
+
+        if (newW < 1) newW = 1;
+        if (newH < 1) newH = 1;
+
+        var updatedBounds = new BoundingBox(newX, newY, newW, newH);
+        _resizeOriginalBounds = updatedBounds;
+
+        await Mediator.Send(new ResizeElementCommand(
+            EditorState.SelectedElementIds,
+            ob,
+            updatedBounds));
+    }
+
+    [JSInvokable]
+    public Task OnResizeMouseUp()
+    {
+        _historyPushed = false;
+        _resizeHandle = null;
+        _resizeOriginalBounds = null;
+        return Task.CompletedTask;
+    }
+
+    private BoundingBox? GetSelectionBoundingBox()
+    {
+        var elements = GetSelectedElements();
+        if (elements.Count == 0) return null;
+
+        double minX = double.MaxValue, minY = double.MaxValue;
+        double maxX = double.MinValue, maxY = double.MinValue;
+
+        foreach (var el in elements)
+        {
+            var bb = el.GetBoundingBox();
+            if (bb is null) continue;
+            minX = Math.Min(minX, bb.X);
+            minY = Math.Min(minY, bb.Y);
+            maxX = Math.Max(maxX, bb.X + bb.Width);
+            maxY = Math.Max(maxY, bb.Y + bb.Height);
+        }
+
+        return minX > maxX ? null : new BoundingBox(minX, minY, maxX - minX, maxY - minY);
     }
 
     [JSInvokable]
