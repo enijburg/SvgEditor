@@ -102,7 +102,7 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
                 break;
 
             case "AddArrowBetweenSelection" when command.SourceElementId is not null && command.TargetElementId is not null:
-                ApplyAddArrowBetweenSelection(command.SourceElementId, command.TargetElementId);
+                ApplyAddArrowBetweenSelection(command.SourceElementId, command.TargetElementId, command.Stroke, command.Width, command.StrokeDashArray);
                 break;
         }
     }
@@ -111,9 +111,14 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         BoundingBox sourceBBox,
         BoundingBox targetBBox,
         string markerId,
-        string arrowId)
+        string arrowId,
+        string? stroke = null,
+        string? strokeWidth = null,
+        string? strokeDashArray = null)
     {
         var inv = CultureInfo.InvariantCulture;
+        var arrowStroke = stroke ?? DefaultArrowColor;
+        var arrowStrokeWidth = strokeWidth ?? DefaultArrowStrokeWidth;
 
         // Compute center points of source and target elements
         var sx = sourceBBox.X + (sourceBBox.Width / 2);
@@ -149,7 +154,7 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         // Build arrowhead marker as a defs element
         var refX = ArrowheadWidth;
         var refY = (ArrowheadHeight / 2.0).ToString(inv);
-        var markerXml = $"""<marker xmlns="http://www.w3.org/2000/svg" id="{markerId}" markerWidth="{ArrowheadWidth}" markerHeight="{ArrowheadHeight}" refX="{refX}" refY="{refY}" orient="auto"><polygon points="0 0, {ArrowheadWidth} {refY}, 0 {ArrowheadHeight}" fill="{DefaultArrowColor}" /></marker>""";
+        var markerXml = $"""<marker xmlns="http://www.w3.org/2000/svg" id="{markerId}" markerWidth="{ArrowheadWidth}" markerHeight="{ArrowheadHeight}" refX="{refX}" refY="{refY}" orient="auto"><polygon points="0 0, {ArrowheadWidth} {refY}, 0 {ArrowheadHeight}" fill="{arrowStroke}" /></marker>""";
         var defs = new SvgUnknown("defs")
         {
             Id = Guid.NewGuid().ToString(),
@@ -159,24 +164,30 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
 
         // Build the arched arrow path using a quadratic bezier curve
         var pathD = string.Create(inv, $"M {sx} {sy} Q {cx} {cy} {tx} {ty}");
+        var attrs = new Dictionary<string, string>
+        {
+            ["d"] = pathD,
+            ["fill"] = "none",
+            ["stroke"] = arrowStroke,
+            ["stroke-width"] = arrowStrokeWidth,
+            ["marker-end"] = $"url(#{markerId})",
+            ["data-element-id"] = arrowId
+        };
+        if (!string.IsNullOrWhiteSpace(strokeDashArray))
+        {
+            attrs["stroke-dasharray"] = strokeDashArray;
+        }
+
         var arrow = new SvgPath
         {
             Id = arrowId,
-            Attributes = new Dictionary<string, string>
-            {
-                ["d"] = pathD,
-                ["fill"] = "none",
-                ["stroke"] = DefaultArrowColor,
-                ["stroke-width"] = DefaultArrowStrokeWidth,
-                ["marker-end"] = $"url(#{markerId})",
-                ["data-element-id"] = arrowId
-            }
+            Attributes = attrs
         };
 
         return (defs, arrow);
     }
 
-    private void ApplyAddArrowBetweenSelection(string sourceElementId, string targetElementId)
+    private void ApplyAddArrowBetweenSelection(string sourceElementId, string targetElementId, string? stroke = null, double? strokeWidth = null, string? strokeDashArray = null)
     {
         if (editorState.Document is null)
             return;
@@ -194,7 +205,8 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         var markerId = $"arrowhead-{Guid.NewGuid():N}";
         var arrowId = Guid.NewGuid().ToString();
 
-        var (defs, arrow) = BuildArrowElements(sourceBBox, targetBBox, markerId, arrowId);
+        var strokeWidthStr = strokeWidth?.ToString(CultureInfo.InvariantCulture);
+        var (defs, arrow) = BuildArrowElements(sourceBBox, targetBBox, markerId, arrowId, stroke, strokeWidthStr, strokeDashArray);
 
         // Add defs and arrow path to the document
         var doc = editorState.Document;

@@ -237,4 +237,86 @@ public sealed class CopilotCommandApplierTests
         Assert.Contains("M 100 80", arrow.D, StringComparison.Ordinal);
         Assert.Contains("350 230", arrow.D, StringComparison.Ordinal);
     }
+
+    [TestMethod]
+    public void BuildArrowElements_WithCustomStyling_AppliesStrokeAndDash()
+    {
+        var sourceBBox = new BoundingBox(50, 50, 100, 60);
+        var targetBBox = new BoundingBox(300, 200, 100, 60);
+
+        var (defs, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "test-marker", "test-arrow",
+            stroke: "#FF0000", strokeWidth: "3", strokeDashArray: "8 4");
+
+        // Arrow styling
+        Assert.AreEqual("#FF0000", arrow.Attributes["stroke"]);
+        Assert.AreEqual("3", arrow.Attributes["stroke-width"]);
+        Assert.AreEqual("8 4", arrow.Attributes["stroke-dasharray"]);
+
+        // Marker should use the custom stroke color
+        Assert.Contains("fill=\"#FF0000\"", defs.InnerXml, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void BuildArrowElements_WithoutDashArray_DoesNotIncludeDashAttribute()
+    {
+        var sourceBBox = new BoundingBox(50, 50, 100, 60);
+        var targetBBox = new BoundingBox(300, 200, 100, 60);
+
+        var (_, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "test-marker", "test-arrow");
+
+        Assert.IsFalse(arrow.Attributes.ContainsKey("stroke-dasharray"));
+    }
+
+    [TestMethod]
+    public async Task AddArrowBetweenSelection_WithDashStyling_AppliesStrokeAndDash()
+    {
+        var r1 = new SvgRect
+        {
+            Id = "r1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x"] = "50", ["y"] = "50", ["width"] = "100", ["height"] = "60"
+            }
+        };
+        var r2 = new SvgRect
+        {
+            Id = "r2",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x"] = "300", ["y"] = "200", ["width"] = "100", ["height"] = "60"
+            }
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [r1, r2] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand
+            {
+                Type = "AddArrowBetweenSelection",
+                SourceElementId = "r1",
+                TargetElementId = "r2",
+                Stroke = "#000000",
+                Width = 3.0,
+                StrokeDashArray = "8 4"
+            }
+        ], "test dashed arrow");
+
+        var doc = state.Document!;
+        var arrow = doc.Elements.OfType<SvgPath>().FirstOrDefault();
+        Assert.IsNotNull(arrow);
+        Assert.AreEqual("#000000", arrow.Attributes["stroke"]);
+        Assert.AreEqual("3", arrow.Attributes["stroke-width"]);
+        Assert.AreEqual("8 4", arrow.Attributes["stroke-dasharray"]);
+
+        // Marker should match the arrow stroke color
+        var defs = doc.Elements.OfType<SvgUnknown>().FirstOrDefault(e => e.Tag == "defs");
+        Assert.IsNotNull(defs);
+        Assert.Contains("fill=\"#000000\"", defs.InnerXml, StringComparison.Ordinal);
+    }
 }

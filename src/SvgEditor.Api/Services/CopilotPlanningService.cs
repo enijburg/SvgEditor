@@ -244,15 +244,25 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
 
             AIFunctionFactory.Create(
                 ([Description("The element ID where the arrow starts from")] string sourceElementId,
-                 [Description("The element ID where the arrow points to")] string targetElementId) =>
+                 [Description("The element ID where the arrow points to")] string targetElementId,
+                 [Description("Optional stroke color as hex (e.g. #000000). Default is #333333")] string? stroke = null,
+                 [Description("Optional stroke width in pixels. Default is 2")] double? strokeWidth = null,
+                 [Description("Optional SVG stroke-dasharray value for dashed lines (e.g. '8 4' for dashes of 8px with 4px gaps)")] string? strokeDashArray = null) =>
                 {
-                    commands.Add(new AddArrowBetweenSelectionCommand { SourceElementId = sourceElementId, TargetElementId = targetElementId });
+                    commands.Add(new AddArrowBetweenSelectionCommand
+                    {
+                        SourceElementId = sourceElementId,
+                        TargetElementId = targetElementId,
+                        Stroke = stroke,
+                        StrokeWidth = strokeWidth,
+                        StrokeDashArray = strokeDashArray,
+                    });
                     return $"Added arched arrow from {sourceElementId} to {targetElementId}";
                 },
                 new AIFunctionFactoryOptions
                 {
                     Name = "add_arrow_between_selection",
-                    Description = "Create an arched arrow connecting from a source element to a target element. Use the first selected element as source and the last selected element as target when the user asks for an arrow between selected elements.",
+                    Description = "Create an arched arrow connecting from a source element to a target element. Supports optional stroke color, width, and dash pattern. Use the first selected element as source and the last selected element as target when the user asks for an arrow between selected elements.",
                     AdditionalProperties = skipPermission,
                 }),
 
@@ -324,7 +334,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             - For color values, use hex format (#RRGGBB). Convert named colors to hex.
             - When the user says "the selected element" or similar, use the selected element IDs.
             - For move commands on all selected elements, use move_selection instead of move_element.
-            - When the user asks to draw an arrow between two selected elements, use add_arrow_between_selection with the first selected element as source and the last as target.
+            - When the user asks to draw an arrow between two selected elements, use add_arrow_between_selection with the first selected element as source and the last as target. Include stroke, strokeWidth, and strokeDashArray parameters directly in the tool call for styling (e.g. dashed arrows). Do NOT use set_stroke on the arrow afterwards.
             - Call the tools first, then provide a brief summary of what you did.
             - Do not use any tools other than the ones listed above.
             """;

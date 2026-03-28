@@ -87,6 +87,13 @@ public sealed partial class CommandValidationService
                     issues.Add("Source and target element must be different.");
                 }
 
+                if (addArrow.Stroke is not null)
+                    ValidateColor(addArrow.Stroke, "Stroke", issues);
+                if (addArrow.StrokeWidth is < 0)
+                    issues.Add("Stroke width must not be negative.");
+                if (addArrow.StrokeDashArray is not null)
+                    ValidateStrokeDashArray(addArrow.StrokeDashArray, issues);
+
                 break;
 
             default:
@@ -139,6 +146,23 @@ public sealed partial class CommandValidationService
         if (Math.Abs(value) > MaxCoordinateValue)
         {
             issues.Add($"{fieldName} value {value} is out of reasonable range.");
+        }
+    }
+
+    [GeneratedRegex(@"^[\d]+(\s*[,\s]\s*[\d]+)*$")]
+    private static partial Regex StrokeDashArrayPattern();
+
+    private static void ValidateStrokeDashArray(string value, List<string> issues)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            issues.Add("stroke-dasharray must not be empty.");
+            return;
+        }
+
+        if (!StrokeDashArrayPattern().IsMatch(value))
+        {
+            issues.Add($"Invalid stroke-dasharray value '{value}'. Expected space or comma-separated numbers (e.g. '8 4').");
         }
     }
 }

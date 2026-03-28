@@ -117,6 +117,9 @@ public sealed record CopilotCommand
 
     [JsonPropertyName("targetElementId")]
     public string? TargetElementId { get; init; }
+
+    [JsonPropertyName("strokeDashArray")]
+    public string? StrokeDashArray { get; init; }
 }
 
 public sealed record CopilotApplyRequest
