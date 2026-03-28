@@ -10,6 +10,13 @@ namespace SvgEditor.Web.Features.Copilot.Services;
 
 public sealed class CopilotCommandApplier(IMediator mediator, EditorState editorState)
 {
+    private const double ArcOffsetRatio = 0.2;
+    private const double MinimumArcOffset = 30;
+    private const string DefaultArrowColor = "#333333";
+    private const string DefaultArrowStrokeWidth = "2";
+    private const int ArrowheadWidth = 10;
+    private const int ArrowheadHeight = 7;
+
     public async Task ApplyCommandsAsync(IReadOnlyList<CopilotCommand> commands, string description)
     {
         if (editorState.Document is null)
@@ -119,8 +126,8 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         var dy = ty - sy;
         var dist = Math.Sqrt((dx * dx) + (dy * dy));
 
-        // Arc height is 20% of the distance between centers (clamped to a minimum)
-        var arcOffset = Math.Max(dist * 0.2, 30);
+        // Arc height is proportional to the distance between centers (clamped to a minimum)
+        var arcOffset = Math.Max(dist * ArcOffsetRatio, MinimumArcOffset);
 
         // Perpendicular direction (rotate 90 degrees)
         double px, py;
@@ -140,7 +147,9 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         var cy = ((sy + ty) / 2) + (py * arcOffset);
 
         // Build arrowhead marker as a defs element
-        var markerXml = $"""<marker xmlns="http://www.w3.org/2000/svg" id="{markerId}" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#333333" /></marker>""";
+        var refX = ArrowheadWidth;
+        var refY = (ArrowheadHeight / 2.0).ToString(inv);
+        var markerXml = $"""<marker xmlns="http://www.w3.org/2000/svg" id="{markerId}" markerWidth="{ArrowheadWidth}" markerHeight="{ArrowheadHeight}" refX="{refX}" refY="{refY}" orient="auto"><polygon points="0 0, {ArrowheadWidth} {refY}, 0 {ArrowheadHeight}" fill="{DefaultArrowColor}" /></marker>""";
         var defs = new SvgUnknown("defs")
         {
             Id = Guid.NewGuid().ToString(),
@@ -157,8 +166,8 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
             {
                 ["d"] = pathD,
                 ["fill"] = "none",
-                ["stroke"] = "#333333",
-                ["stroke-width"] = "2",
+                ["stroke"] = DefaultArrowColor,
+                ["stroke-width"] = DefaultArrowStrokeWidth,
                 ["marker-end"] = $"url(#{markerId})",
                 ["data-element-id"] = arrowId
             }
