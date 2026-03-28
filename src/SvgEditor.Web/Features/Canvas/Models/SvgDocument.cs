@@ -8,6 +8,12 @@ public sealed class SvgDocument
     public List<SvgElement> Elements { get; init; } = [];
     public Dictionary<string, string> Attributes { get; init; } = [];
 
+    /// <summary>
+    /// XML comment text nodes that appear in the document prolog, before the root &lt;svg&gt; element.
+    /// These are preserved from imported SVG files and re-emitted on export.
+    /// </summary>
+    public IReadOnlyList<string> PrologComments { get; init; } = [];
+
     public SvgElement? FindById(string id) => FindInList(Elements, id);
 
     private static SvgElement? FindInList(List<SvgElement> elements, string id)
@@ -30,7 +36,8 @@ public sealed class SvgDocument
         Width = Width,
         Height = Height,
         Elements = Elements.Select(e => e.DeepClone()).ToList(),
-        Attributes = new Dictionary<string, string>(Attributes)
+        Attributes = new Dictionary<string, string>(Attributes),
+        PrologComments = PrologComments
     };
 
     public SvgDocument RemoveElements(IReadOnlyCollection<string> ids)
@@ -42,7 +49,8 @@ public sealed class SvgDocument
             Width = Width,
             Height = Height,
             Elements = newElements,
-            Attributes = new Dictionary<string, string>(Attributes)
+            Attributes = new Dictionary<string, string>(Attributes),
+            PrologComments = PrologComments
         };
     }
 
@@ -78,7 +86,8 @@ public sealed class SvgDocument
             Width = Width,
             Height = Height,
             Elements = newElements,
-            Attributes = new Dictionary<string, string>(Attributes)
+            Attributes = new Dictionary<string, string>(Attributes),
+            PrologComments = PrologComments
         };
     }
 

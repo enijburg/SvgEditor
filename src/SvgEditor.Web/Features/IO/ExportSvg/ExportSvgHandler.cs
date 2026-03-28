@@ -1,3 +1,5 @@
+using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using SvgEditor.Web.Features.Canvas.Models;
 using SvgEditor.Web.Shared.Mediator;
@@ -28,15 +30,30 @@ public sealed class ExportSvgHandler : IRequestHandler<ExportSvgCommand, string>
             root.Add(ElementToXml(element));
         }
 
-        var xDoc = new XDocument(
-            new XDeclaration("1.0", "utf-8", null),
-            root);
+        var xDoc = new XDocument(new XDeclaration("1.0", "utf-8", null));
 
-        return Task.FromResult(xDoc.ToString());
+        // Re-emit prolog comments that appeared before the root <svg> element
+        foreach (var commentText in doc.PrologComments)
+        {
+            xDoc.Add(new XComment(commentText));
+        }
+
+        xDoc.Add(root);
+
+        var sb = new StringBuilder();
+        using (var writer = XmlWriter.Create(sb, new XmlWriterSettings { Indent = true, IndentChars = "  ", OmitXmlDeclaration = true }))
+        {
+            xDoc.Save(writer);
+        }
+
+        return Task.FromResult(sb.ToString());
     }
 
-    private static XElement ElementToXml(SvgElement element)
+    private static XNode ElementToXml(SvgElement element)
     {
+        if (element is SvgComment comment)
+            return new XComment(comment.Text);
+
         var el = new XElement(SvgNs + element.Tag);
 
         foreach (var (key, value) in element.Attributes)

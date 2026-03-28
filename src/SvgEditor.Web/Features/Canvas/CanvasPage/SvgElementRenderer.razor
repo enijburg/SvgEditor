@@ -52,6 +52,10 @@ else if (Element is SvgUnknown unknownEl)
 {
     @((MarkupString)RenderUnknown(unknownEl))
 }
+else if (Element is SvgComment)
+{
+    @* XML comments are preserved in the document model but have no visual representation *@
+}
 else
 {
     @* Fallback — should not normally be reached *@
