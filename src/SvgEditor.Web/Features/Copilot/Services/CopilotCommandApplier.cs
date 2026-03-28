@@ -12,6 +12,7 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
 {
     private const double ArcOffsetRatio = 0.2;
     private const double MinimumArcOffset = 30;
+    private const double DirectionEpsilon = 0.001;
     private const string DefaultArrowColor = "#333333";
     private const string DefaultArrowStrokeWidth = "2";
     private const int ArrowheadWidth = 10;
@@ -224,7 +225,7 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         var dy = toY - fromY;
 
         // If direction is zero, return center
-        if (Math.Abs(dx) < 0.001 && Math.Abs(dy) < 0.001)
+        if (Math.Abs(dx) < DirectionEpsilon && Math.Abs(dy) < DirectionEpsilon)
             return (fromX, fromY);
 
         var halfW = bbox.Width / 2;
