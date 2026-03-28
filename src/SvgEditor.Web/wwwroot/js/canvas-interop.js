@@ -120,6 +120,21 @@ window.svgEditorCanvas = (function () {
         } else if (ctrl && (evt.key === 'y' || (evt.key === 'z' && evt.shiftKey))) {
             evt.preventDefault();
             dotNetRef.invokeMethodAsync('OnKeyDown', 'redo');
+        } else if (evt.key === 'Delete' || evt.key === 'Backspace') {
+            evt.preventDefault();
+            dotNetRef.invokeMethodAsync('OnKeyDown', 'delete');
+        } else if (evt.key === 'ArrowUp') {
+            evt.preventDefault();
+            dotNetRef.invokeMethodAsync('OnKeyDown', 'arrowup');
+        } else if (evt.key === 'ArrowDown') {
+            evt.preventDefault();
+            dotNetRef.invokeMethodAsync('OnKeyDown', 'arrowdown');
+        } else if (evt.key === 'ArrowLeft') {
+            evt.preventDefault();
+            dotNetRef.invokeMethodAsync('OnKeyDown', 'arrowleft');
+        } else if (evt.key === 'ArrowRight') {
+            evt.preventDefault();
+            dotNetRef.invokeMethodAsync('OnKeyDown', 'arrowright');
         }
     }
 

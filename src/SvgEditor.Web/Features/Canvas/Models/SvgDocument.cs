@@ -33,6 +33,42 @@ public sealed class SvgDocument
         Attributes = new Dictionary<string, string>(Attributes)
     };
 
+    public SvgDocument RemoveElements(IReadOnlyCollection<string> ids)
+    {
+        var newElements = RemoveFromList(Elements, ids);
+        return new SvgDocument
+        {
+            ViewBox = ViewBox,
+            Width = Width,
+            Height = Height,
+            Elements = newElements,
+            Attributes = new Dictionary<string, string>(Attributes)
+        };
+    }
+
+    private static List<SvgElement> RemoveFromList(List<SvgElement> elements, IReadOnlyCollection<string> ids)
+    {
+        var result = new List<SvgElement>(elements.Count);
+        foreach (var element in elements)
+        {
+            if (ids.Contains(element.Id)) continue;
+            if (element is SvgGroup group)
+            {
+                result.Add(new SvgGroup
+                {
+                    Id = group.Id,
+                    Attributes = new Dictionary<string, string>(group.Attributes),
+                    Children = RemoveFromList(group.Children, ids)
+                });
+            }
+            else
+            {
+                result.Add(element);
+            }
+        }
+        return result;
+    }
+
     public SvgDocument ReplaceElement(SvgElement updated)
     {
         var newElements = ReplaceInList(Elements, updated);
