@@ -18,6 +18,15 @@ public sealed class SvgText : SvgElement
 
     public string Content { get; init; } = string.Empty;
 
+    /// <summary>
+    /// The ID of a <see cref="SvgLine"/> element whose geometry this text follows via its
+    /// <c>path</c> attribute.  Backed by the <c>data-line-id</c> SVG attribute.
+    /// When set, <see cref="WithResize"/> leaves the text's coordinates unchanged because
+    /// the <c>path</c> attribute (updated by <see cref="ResizeElement.ResizeElementHandler"/>)
+    /// determines the text layout position.
+    /// </summary>
+    public string? LinkedLineId => Attributes.GetValueOrDefault("data-line-id");
+
     public override SvgElement WithOffset(double dx, double dy)
     {
         var attrs = new Dictionary<string, string>(Attributes)
@@ -30,6 +39,13 @@ public sealed class SvgText : SvgElement
 
     public override SvgElement WithResize(BoundingBox original, BoundingBox updated)
     {
+        // When the text is path-linked to a line, its layout position is controlled by the
+        // SVG 'path' attribute which the ResizeElementHandler keeps in sync with the line.
+        // Applying a coordinate-space remap here would fight that positioning, so we return
+        // the element unchanged and let the handler do the right thing.
+        if (LinkedLineId is not null)
+            return this;
+
         var (nx, ny) = MapPoint(X, Y, original, updated);
         var attrs = new Dictionary<string, string>(Attributes)
         {

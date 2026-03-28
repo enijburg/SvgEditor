@@ -56,6 +56,9 @@ public sealed class SvgLine : SvgElement
 
     public override SvgElement DeepClone() => new SvgLine { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
+    /// <summary>Returns the SVG path data that traces this line: "M x1 y1 L x2 y2".</summary>
+    public string ToPathData() => $"M {FormatDouble(X1)} {FormatDouble(Y1)} L {FormatDouble(X2)} {FormatDouble(Y2)}";
+
     public override BoundingBox? GetBoundingBox()
     {
         var minX = Math.Min(X1, X2);
