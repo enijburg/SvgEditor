@@ -149,7 +149,7 @@ public sealed partial class CommandValidationService
         }
     }
 
-    [GeneratedRegex(@"^[\d]+(\s*[,\s]\s*[\d]+)*$")]
+    [GeneratedRegex(@"^[\d][\d.]*(\s*[,\s]\s*[\d][\d.]*)*$")]
     private static partial Regex StrokeDashArrayPattern();
 
     private static void ValidateStrokeDashArray(string value, List<string> issues)
