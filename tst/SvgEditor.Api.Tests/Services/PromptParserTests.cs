@@ -1,13 +1,16 @@
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Text.Json;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging.Abstractions;
 using SvgEditor.Api.Contracts;
 using SvgEditor.Api.Services;
 
 namespace SvgEditor.Api.Tests.Services;
 
 [TestClass]
-public sealed class PromptParserTests
+public sealed class CopilotPlanningServiceToolTests
 {
-    private readonly PromptParser _sut = new();
-
     private static EditorContext CreateContext(params string[] elementIds) => new()
     {
         DocumentId = "test-doc",
@@ -27,263 +30,198 @@ public sealed class PromptParserTests
         }).ToList()
     };
 
-    [TestMethod]
-    public void Parse_MakeSelectedRectangleBlue_ReturnsSetFillCommand()
+    /// <summary>
+    /// Invokes the named tool with the given arguments and returns the commands collected.
+    /// This tests the tool functions that the Copilot SDK will call.
+    /// </summary>
+    private static async Task<(List<SvgCommand> Commands, object? Result)> InvokeToolAsync(
+        string toolName, Dictionary<string, object?> args, EditorContext? context = null)
     {
-        var context = CreateContext("rect-12");
-        var request = new PlanRequest
+        context ??= CreateContext("rect-1");
+        var commands = new List<SvgCommand>();
+        var tools = CopilotPlanningService.CreateToolsForTesting(context, commands);
+        var tool = tools.First(t => t.Name == toolName);
+        var result = await tool.InvokeAsync(new AIFunctionArguments(args));
+        return (commands, result);
+    }
+
+    [TestMethod]
+    public async Task SetFillTool_AddsSetFillCommand()
+    {
+        var (commands, result) = await InvokeToolAsync("set_fill", new Dictionary<string, object?>
         {
-            Prompt = "Make the selected rectangle blue",
-            Context = context
-        };
+            ["elementId"] = "rect-1",
+            ["fill"] = "#0000FF",
+        });
 
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        Assert.HasCount(1, response.Commands);
-        var cmd = response.Commands[0] as SetFillCommand;
+        Assert.HasCount(1, commands);
+        var cmd = commands[0] as SetFillCommand;
         Assert.IsNotNull(cmd);
-        Assert.AreEqual("rect-12", cmd.ElementId);
+        Assert.AreEqual("rect-1", cmd.ElementId);
         Assert.AreEqual("#0000FF", cmd.Fill);
     }
 
     [TestMethod]
-    public void Parse_ChangeColorToRed_ReturnsSetFillCommand()
+    public async Task SetStrokeTool_AddsSetStrokeCommand()
     {
-        var context = CreateContext("circle-1");
-        var request = new PlanRequest
+        var (commands, _) = await InvokeToolAsync("set_stroke", new Dictionary<string, object?>
         {
-            Prompt = "Change the color to red",
-            Context = context
-        };
+            ["elementId"] = "rect-1",
+            ["stroke"] = "#FF0000",
+            ["width"] = 2.0,
+        });
 
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        Assert.HasCount(1, response.Commands);
-        var cmd = response.Commands[0] as SetFillCommand;
+        Assert.HasCount(1, commands);
+        var cmd = commands[0] as SetStrokeCommand;
         Assert.IsNotNull(cmd);
-        Assert.AreEqual("#FF0000", cmd.Fill);
+        Assert.AreEqual("rect-1", cmd.ElementId);
+        Assert.AreEqual("#FF0000", cmd.Stroke);
+        Assert.AreEqual(2.0, cmd.Width);
     }
 
     [TestMethod]
-    public void Parse_SetFillToHexColor_ReturnsSetFillCommand()
+    public async Task MoveElementTool_AddsMoveElementCommand()
     {
-        var context = CreateContext("rect-1");
-        var request = new PlanRequest
+        var (commands, _) = await InvokeToolAsync("move_element", new Dictionary<string, object?>
         {
-            Prompt = "Set fill to #FF8800",
-            Context = context
-        };
+            ["elementId"] = "rect-1",
+            ["dx"] = 20.0,
+            ["dy"] = -10.0,
+        });
 
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        var cmd = response.Commands[0] as SetFillCommand;
+        Assert.HasCount(1, commands);
+        var cmd = commands[0] as MoveElementCommand;
         Assert.IsNotNull(cmd);
-        Assert.AreEqual("#FF8800", cmd.Fill);
-    }
-
-    [TestMethod]
-    public void Parse_MoveRight20Pixels_ReturnsMoveSelectionCommand()
-    {
-        var context = CreateContext("rect-1");
-        var request = new PlanRequest
-        {
-            Prompt = "Move the selected icon 20 pixels to the right",
-            Context = context
-        };
-
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        Assert.HasCount(1, response.Commands);
-        var cmd = response.Commands[0] as MoveSelectionCommand;
-        Assert.IsNotNull(cmd);
+        Assert.AreEqual("rect-1", cmd.ElementId);
         Assert.AreEqual(20.0, cmd.Dx);
+        Assert.AreEqual(-10.0, cmd.Dy);
+    }
+
+    [TestMethod]
+    public async Task MoveSelectionTool_AddsMoveSelectionCommand()
+    {
+        var (commands, _) = await InvokeToolAsync("move_selection", new Dictionary<string, object?>
+        {
+            ["dx"] = 50.0,
+            ["dy"] = 0.0,
+        });
+
+        Assert.HasCount(1, commands);
+        var cmd = commands[0] as MoveSelectionCommand;
+        Assert.IsNotNull(cmd);
+        Assert.AreEqual(50.0, cmd.Dx);
         Assert.AreEqual(0.0, cmd.Dy);
     }
 
     [TestMethod]
-    public void Parse_Move50PxLeft_ReturnsMoveSelectionWithNegativeDx()
+    public async Task AlignSelectionTool_AddsAlignCommand()
     {
-        var context = CreateContext("rect-1");
-        var request = new PlanRequest
+        var (commands, _) = await InvokeToolAsync("align_selection", new Dictionary<string, object?>
         {
-            Prompt = "Move 50 pixels to the left",
-            Context = context
-        };
+            ["alignment"] = "center",
+        });
 
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        var cmd = response.Commands[0] as MoveSelectionCommand;
-        Assert.IsNotNull(cmd);
-        Assert.AreEqual(-50.0, cmd.Dx);
-        Assert.AreEqual(0.0, cmd.Dy);
-    }
-
-    [TestMethod]
-    public void Parse_Move30PxDown_ReturnsMoveSelectionWithPositiveDy()
-    {
-        var context = CreateContext("rect-1");
-        var request = new PlanRequest
-        {
-            Prompt = "Move 30 pixels down",
-            Context = context
-        };
-
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        var cmd = response.Commands[0] as MoveSelectionCommand;
-        Assert.IsNotNull(cmd);
-        Assert.AreEqual(0.0, cmd.Dx);
-        Assert.AreEqual(30.0, cmd.Dy);
-    }
-
-    [TestMethod]
-    public void Parse_CenterHorizontally_ReturnsAlignSelectionCommand()
-    {
-        var context = CreateContext("rect-1");
-        var request = new PlanRequest
-        {
-            Prompt = "Center the selected element horizontally",
-            Context = context
-        };
-
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        Assert.HasCount(1, response.Commands);
-        var cmd = response.Commands[0] as AlignSelectionCommand;
+        Assert.HasCount(1, commands);
+        var cmd = commands[0] as AlignSelectionCommand;
         Assert.IsNotNull(cmd);
         Assert.AreEqual("center", cmd.Alignment);
     }
 
     [TestMethod]
-    public void Parse_AlignLeft_ReturnsAlignSelectionCommand()
+    public async Task GetSelectionTool_ReturnsSelectedElements()
     {
-        var context = CreateContext("rect-1");
-        var request = new PlanRequest
-        {
-            Prompt = "Align the selection to the left",
-            Context = context
-        };
+        var context = CreateContext("rect-1", "rect-2");
+        var (commands, result) = await InvokeToolAsync("get_selection", [], context);
 
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        var cmd = response.Commands[0] as AlignSelectionCommand;
-        Assert.IsNotNull(cmd);
-        Assert.AreEqual("left", cmd.Alignment);
+        Assert.IsEmpty(commands);
+        Assert.IsNotNull(result);
+        var json = result.ToString()!;
+        Assert.Contains("rect-1", json);
+        Assert.Contains("rect-2", json);
     }
 
     [TestMethod]
-    public void Parse_UnknownPrompt_ReturnsInvalidResponse()
+    public async Task GetDocumentSummaryTool_ReturnsDocumentInfo()
     {
         var context = CreateContext("rect-1");
+        var (commands, result) = await InvokeToolAsync("get_document_summary", [], context);
+
+        Assert.IsEmpty(commands);
+        Assert.IsNotNull(result);
+        var json = result.ToString()!;
+        Assert.Contains("test-doc", json);
+        Assert.Contains("1024", json);
+    }
+
+    [TestMethod]
+    public void CreateTools_CreatesAllExpectedTools()
+    {
+        var context = CreateContext("rect-1");
+        var commands = new List<SvgCommand>();
+        var tools = CopilotPlanningService.CreateToolsForTesting(context, commands);
+
+        Assert.HasCount(7, tools);
+
+        var toolNames = tools.Select(t => t.Name).ToList();
+        Assert.Contains("set_fill", toolNames);
+        Assert.Contains("set_stroke", toolNames);
+        Assert.Contains("move_element", toolNames);
+        Assert.Contains("move_selection", toolNames);
+        Assert.Contains("align_selection", toolNames);
+        Assert.Contains("get_selection", toolNames);
+        Assert.Contains("get_document_summary", toolNames);
+    }
+
+    [TestMethod]
+    public async Task MultipleToolInvocations_AccumulateCommands()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>();
+        var tools = CopilotPlanningService.CreateToolsForTesting(context, commands);
+
+        var setFill = tools.First(t => t.Name == "set_fill");
+        var moveSelection = tools.First(t => t.Name == "move_selection");
+
+        await setFill.InvokeAsync(new AIFunctionArguments(new Dictionary<string, object?>
+        {
+            ["elementId"] = "rect-1",
+            ["fill"] = "#FF0000",
+        }));
+        await setFill.InvokeAsync(new AIFunctionArguments(new Dictionary<string, object?>
+        {
+            ["elementId"] = "rect-2",
+            ["fill"] = "#00FF00",
+        }));
+        await moveSelection.InvokeAsync(new AIFunctionArguments(new Dictionary<string, object?>
+        {
+            ["dx"] = 10.0,
+            ["dy"] = 0.0,
+        }));
+
+        Assert.HasCount(3, commands);
+        Assert.IsInstanceOfType<SetFillCommand>(commands[0]);
+        Assert.IsInstanceOfType<SetFillCommand>(commands[1]);
+        Assert.IsInstanceOfType<MoveSelectionCommand>(commands[2]);
+    }
+
+    [TestMethod]
+    public async Task PlanAsync_WhenCopilotUnavailable_ReturnsUnavailableResponse()
+    {
+        var service = new CopilotPlanningService(NullLogger<CopilotPlanningService>.Instance);
         var request = new PlanRequest
         {
-            Prompt = "Do something completely unknown",
-            Context = context
+            Prompt = "Make rect blue",
+            Context = CreateContext("rect-1")
         };
 
-        var response = _sut.Parse(request);
+        // The Copilot CLI is not installed in the test environment,
+        // so this should return a graceful error response
+        var response = await service.PlanAsync(request);
 
         Assert.IsFalse(response.Validation.IsValid);
         Assert.IsEmpty(response.Commands);
-        Assert.Contains("Could not understand", response.Summary);
-    }
-
-    [TestMethod]
-    public void Parse_NoSelection_FillCommand_ReturnsInvalid()
-    {
-        var context = new EditorContext
-        {
-            DocumentId = "test",
-            DocumentVersion = "1",
-            Canvas = new CanvasSize { Width = 1024, Height = 768 },
-            Selection = [],
-            Elements = []
-        };
-        var request = new PlanRequest
-        {
-            Prompt = "Make it blue",
-            Context = context
-        };
-
-        var response = _sut.Parse(request);
-
-        Assert.IsFalse(response.Validation.IsValid);
-    }
-
-    [TestMethod]
-    public void Parse_MultipleSelectedElements_FillCommand_CreatesMultipleCommands()
-    {
-        var context = CreateContext("rect-1", "rect-2", "rect-3");
-        var request = new PlanRequest
-        {
-            Prompt = "Change color to green",
-            Context = context
-        };
-
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        Assert.HasCount(3, response.Commands);
-        Assert.IsTrue(response.Commands.All(c => c is SetFillCommand));
-    }
-
-    [TestMethod]
-    public void Parse_StrokeCommand_ReturnsSetStrokeCommands()
-    {
-        var context = CreateContext("rect-1");
-        var request = new PlanRequest
-        {
-            Prompt = "Set the stroke to red",
-            Context = context
-        };
-
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        Assert.HasCount(1, response.Commands);
-        var cmd = response.Commands[0] as SetStrokeCommand;
-        Assert.IsNotNull(cmd);
-        Assert.AreEqual("#FF0000", cmd.Stroke);
-    }
-
-    [TestMethod]
-    public void Parse_SummaryContainsElementId()
-    {
-        var context = CreateContext("my-rect");
-        var request = new PlanRequest
-        {
-            Prompt = "Make it blue",
-            Context = context
-        };
-
-        var response = _sut.Parse(request);
-
-        Assert.Contains("my-rect", response.Summary);
-    }
-
-    [TestMethod]
-    public void Parse_PaintGreen_ReturnsSetFillCommand()
-    {
-        var context = CreateContext("rect-1");
-        var request = new PlanRequest
-        {
-            Prompt = "Paint it green",
-            Context = context
-        };
-
-        var response = _sut.Parse(request);
-
-        Assert.IsTrue(response.Validation.IsValid);
-        var cmd = response.Commands[0] as SetFillCommand;
-        Assert.IsNotNull(cmd);
-        Assert.AreEqual("#008000", cmd.Fill);
+        // Either Copilot is not available or session fails - both are expected
+        Assert.IsNotEmpty(response.Validation.Issues);
     }
 }
+

@@ -1,20 +1,13 @@
-using System.Text.Json;
 using SvgEditor.Api.Contracts;
 using SvgEditor.Api.Services;
 using SvgEditor.Api.Telemetry;
-using SvgEditor.Api.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
 builder.Services.AddSingleton<CommandValidationService>();
-builder.Services.AddSingleton<PromptParser>();
-builder.Services.AddSingleton<ISvgTool, GetSelectionTool>();
-builder.Services.AddSingleton<ISvgTool, GetDocumentSummaryTool>();
-builder.Services.AddSingleton<ISvgTool, SetFillTool>();
-builder.Services.AddSingleton<ISvgTool, MoveSelectionTool>();
-builder.Services.AddSingleton<ISvgTool, AlignSelectionTool>();
+builder.Services.AddSingleton<CopilotPlanningService>();
 
 builder.Services.AddCors(options =>
 {
@@ -34,7 +27,7 @@ var app = builder.Build();
 app.MapDefaultEndpoints();
 app.UseCors();
 
-app.MapPost("/api/copilot/plan", (PlanRequest request, PromptParser parser, CommandValidationService validator, ILogger<Program> logger) =>
+app.MapPost("/api/copilot/plan", async (PlanRequest request, CopilotPlanningService planner, ILogger<Program> logger, CancellationToken cancellationToken) =>
 {
     using var activity = TelemetryConstants.ActivitySource.StartActivity("CopilotPlan");
     activity?.SetTag("copilot.prompt", request.Prompt);
@@ -43,7 +36,7 @@ app.MapPost("/api/copilot/plan", (PlanRequest request, PromptParser parser, Comm
 
     logger.LogInformation("Copilot plan request received: {Prompt}", request.Prompt);
 
-    var response = parser.Parse(request);
+    var response = await planner.PlanAsync(request, cancellationToken);
 
     activity?.SetTag("copilot.command_count", response.Commands.Count);
     activity?.SetTag("copilot.validation_valid", response.Validation.IsValid);
