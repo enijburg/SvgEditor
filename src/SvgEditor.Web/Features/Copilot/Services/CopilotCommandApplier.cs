@@ -33,7 +33,7 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
 
             case "SetStroke" when command.ElementId is not null && command.Stroke is not null:
                 var element = editorState.Document?.FindById(command.ElementId);
-                if (element is not null)
+                if (element is not null && editorState.Document is not null)
                 {
                     element.Attributes["stroke"] = command.Stroke;
                     if (command.Width.HasValue)
@@ -44,9 +44,31 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
                     // Update marker colors (arrowheads) to match the new stroke color
                     var markerIds = new HashSet<string>(StringComparer.Ordinal);
                     UpdateFillColorHandler.CollectReferencedMarkerIds(element, markerIds);
-                    if (markerIds.Count > 0 && editorState.Document is not null)
+                    if (markerIds.Count > 0)
                     {
-                        UpdateFillColorHandler.UpdateMarkerColors(editorState.Document.Elements, markerIds, command.Stroke);
+                        var sharedMarkerIds = UpdateFillColorHandler.FindSharedMarkerIds(
+                            editorState.Document.Elements, markerIds, [command.ElementId]);
+
+                        if (sharedMarkerIds.Count > 0)
+                        {
+                            var idMapping = UpdateFillColorHandler.CloneSharedMarkers(
+                                editorState.Document.Elements, sharedMarkerIds);
+                            UpdateFillColorHandler.RemapMarkerReferences(element, idMapping);
+
+                            var clonedIds = new HashSet<string>(idMapping.Values, StringComparer.Ordinal);
+                            UpdateFillColorHandler.UpdateMarkerColors(editorState.Document.Elements, clonedIds, command.Stroke);
+
+                            var exclusiveIds = new HashSet<string>(
+                                markerIds.Except(sharedMarkerIds), StringComparer.Ordinal);
+                            if (exclusiveIds.Count > 0)
+                            {
+                                UpdateFillColorHandler.UpdateMarkerColors(editorState.Document.Elements, exclusiveIds, command.Stroke);
+                            }
+                        }
+                        else
+                        {
+                            UpdateFillColorHandler.UpdateMarkerColors(editorState.Document.Elements, markerIds, command.Stroke);
+                        }
                     }
 
                     editorState.NotifyStateChanged();
