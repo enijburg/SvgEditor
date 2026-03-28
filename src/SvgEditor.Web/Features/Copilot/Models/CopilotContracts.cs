@@ -126,6 +126,12 @@ public sealed record CopilotCommand
 
     [JsonPropertyName("targetAnchor")]
     public string? TargetAnchor { get; init; }
+
+    [JsonPropertyName("lineElementId")]
+    public string? LineElementId { get; init; }
+
+    [JsonPropertyName("textElementId")]
+    public string? TextElementId { get; init; }
 }
 
 public sealed record CopilotApplyRequest

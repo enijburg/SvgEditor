@@ -105,6 +105,18 @@ public sealed partial class CommandValidationService
 
                 break;
 
+            case PlaceTextOnLineCommand placeTextOnLine:
+                ValidateElementId(placeTextOnLine.LineElementId, knownElementIds, issues);
+                ValidateElementId(placeTextOnLine.TextElementId, knownElementIds, issues);
+                if (!string.IsNullOrWhiteSpace(placeTextOnLine.LineElementId) &&
+                    !string.IsNullOrWhiteSpace(placeTextOnLine.TextElementId) &&
+                    string.Equals(placeTextOnLine.LineElementId, placeTextOnLine.TextElementId, StringComparison.Ordinal))
+                {
+                    issues.Add("Line and text element must be different.");
+                }
+
+                break;
+
             default:
                 issues.Add($"Unknown command type: {command.GetType().Name}");
                 break;

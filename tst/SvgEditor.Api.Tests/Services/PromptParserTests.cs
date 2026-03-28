@@ -206,7 +206,7 @@ public sealed class CopilotPlanningServiceToolTests
         var commands = new List<SvgCommand>();
         var tools = CopilotPlanningService.CreateToolsForTesting(context, commands);
 
-        Assert.HasCount(8, tools);
+        Assert.HasCount(9, tools);
 
         var toolNames = tools.Select(t => t.Name).ToList();
         Assert.Contains("set_fill", toolNames);
@@ -215,6 +215,7 @@ public sealed class CopilotPlanningServiceToolTests
         Assert.Contains("move_selection", toolNames);
         Assert.Contains("align_selection", toolNames);
         Assert.Contains("add_arrow_between_selection", toolNames);
+        Assert.Contains("place_text_on_line", toolNames);
         Assert.Contains("get_selection", toolNames);
         Assert.Contains("get_document_summary", toolNames);
     }
@@ -249,6 +250,26 @@ public sealed class CopilotPlanningServiceToolTests
         Assert.IsInstanceOfType<SetFillCommand>(commands[0]);
         Assert.IsInstanceOfType<SetFillCommand>(commands[1]);
         Assert.IsInstanceOfType<MoveSelectionCommand>(commands[2]);
+    }
+
+    [TestMethod]
+    public async Task PlaceTextOnLineTool_AddsCommand()
+    {
+        var context = CreateContext("line-1", "text-1");
+        var (commands, result) = await InvokeToolAsync("place_text_on_line", new Dictionary<string, object?>
+        {
+            ["lineElementId"] = "line-1",
+            ["textElementId"] = "text-1",
+        }, context);
+
+        Assert.HasCount(1, commands);
+        var cmd = commands[0] as PlaceTextOnLineCommand;
+        Assert.IsNotNull(cmd);
+        Assert.AreEqual("line-1", cmd.LineElementId);
+        Assert.AreEqual("text-1", cmd.TextElementId);
+        Assert.IsNotNull(result);
+        Assert.Contains("line-1", result.ToString()!);
+        Assert.Contains("text-1", result.ToString()!);
     }
 
     [TestMethod]

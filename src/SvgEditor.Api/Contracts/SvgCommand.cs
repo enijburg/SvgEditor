@@ -9,6 +9,7 @@ namespace SvgEditor.Api.Contracts;
 [JsonDerivedType(typeof(MoveSelectionCommand), "MoveSelection")]
 [JsonDerivedType(typeof(AlignSelectionCommand), "AlignSelection")]
 [JsonDerivedType(typeof(AddArrowBetweenSelectionCommand), "AddArrowBetweenSelection")]
+[JsonDerivedType(typeof(PlaceTextOnLineCommand), "PlaceTextOnLine")]
 public abstract record SvgCommand;
 
 public sealed record SetFillCommand : SvgCommand
@@ -81,4 +82,13 @@ public sealed record AddArrowBetweenSelectionCommand : SvgCommand
 
     [JsonPropertyName("targetAnchor")]
     public string? TargetAnchor { get; init; }
+}
+
+public sealed record PlaceTextOnLineCommand : SvgCommand
+{
+    [JsonPropertyName("lineElementId")]
+    public required string LineElementId { get; init; }
+
+    [JsonPropertyName("textElementId")]
+    public required string TextElementId { get; init; }
 }

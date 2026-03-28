@@ -562,4 +562,107 @@ public sealed class CopilotCommandApplierTests
         Assert.AreEqual("bottom", CopilotCommandApplier.NormalizeAnchor("Bottom"));
         Assert.AreEqual("border", CopilotCommandApplier.NormalizeAnchor("invalid"));
     }
+
+    [TestMethod]
+    public async Task PlaceTextOnLine_WithSvgLine_SetsPathAndDataLineId()
+    {
+        var line = new SvgLine
+        {
+            Id = "l1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x1"] = "0", ["y1"] = "0", ["x2"] = "200", ["y2"] = "100"
+            }
+        };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string> { ["x"] = "10", ["y"] = "20" },
+            Content = "Label"
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [line, text] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand { Type = "PlaceTextOnLine", LineElementId = "l1", TextElementId = "t1" }
+        ], "place text on line");
+
+        var updatedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.AreEqual("l1", updatedText.Attributes["data-line-id"]);
+        Assert.AreEqual("M 0 0 L 200 100", updatedText.Attributes["path"]);
+        Assert.AreEqual("Label", updatedText.Content);
+    }
+
+    [TestMethod]
+    public async Task PlaceTextOnLine_WithSvgPath_SetsPathAttribute()
+    {
+        var arrow = new SvgPath
+        {
+            Id = "p1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["d"] = "M 50 110 Q 225 30 300 200",
+                ["fill"] = "none",
+                ["stroke"] = "#333333"
+            }
+        };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string> { ["x"] = "0", ["y"] = "0" },
+            Content = "Arrow label"
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [arrow, text] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand { Type = "PlaceTextOnLine", LineElementId = "p1", TextElementId = "t1" }
+        ], "place text on arrow");
+
+        var updatedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.AreEqual("p1", updatedText.Attributes["data-line-id"]);
+        Assert.AreEqual("M 50 110 Q 225 30 300 200", updatedText.Attributes["path"]);
+    }
+
+    [TestMethod]
+    public async Task PlaceTextOnLine_WithUnsupportedElement_DoesNotModifyText()
+    {
+        var rect = new SvgRect
+        {
+            Id = "r1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x"] = "0", ["y"] = "0", ["width"] = "100", ["height"] = "50"
+            }
+        };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string> { ["x"] = "10", ["y"] = "20" },
+            Content = "Label"
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [rect, text] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand { Type = "PlaceTextOnLine", LineElementId = "r1", TextElementId = "t1" }
+        ], "place text on rect (noop)");
+
+        // Rect is not a line or path, so the text should not be modified
+        var unchangedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.IsFalse(unchangedText.Attributes.ContainsKey("data-line-id"));
+        Assert.IsFalse(unchangedText.Attributes.ContainsKey("path"));
+    }
 }
