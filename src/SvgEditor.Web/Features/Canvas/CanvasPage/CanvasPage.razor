@@ -244,7 +244,7 @@
         if (!_historyPushed)
         {
             _historyPushed = true;
-            await Mediator.Send(new PushHistoryCommand("Resize element"));
+            await Mediator.Send(new PushHistoryCommand("Resize"));
         }
 
         var ob = _resizeOriginalBounds;
