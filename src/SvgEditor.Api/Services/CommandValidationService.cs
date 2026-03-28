@@ -77,6 +77,18 @@ public sealed partial class CommandValidationService
                     issues.Add($"Invalid alignment '{alignSelection.Alignment}'. Valid values: {string.Join(", ", ValidAlignments)}.");
                 break;
 
+            case AddArrowBetweenSelectionCommand addArrow:
+                ValidateElementId(addArrow.SourceElementId, knownElementIds, issues);
+                ValidateElementId(addArrow.TargetElementId, knownElementIds, issues);
+                if (!string.IsNullOrWhiteSpace(addArrow.SourceElementId) &&
+                    !string.IsNullOrWhiteSpace(addArrow.TargetElementId) &&
+                    string.Equals(addArrow.SourceElementId, addArrow.TargetElementId, StringComparison.Ordinal))
+                {
+                    issues.Add("Source and target element must be different.");
+                }
+
+                break;
+
             default:
                 issues.Add($"Unknown command type: {command.GetType().Name}");
                 break;

@@ -243,6 +243,20 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
                 }),
 
             AIFunctionFactory.Create(
+                ([Description("The element ID where the arrow starts from")] string sourceElementId,
+                 [Description("The element ID where the arrow points to")] string targetElementId) =>
+                {
+                    commands.Add(new AddArrowBetweenSelectionCommand { SourceElementId = sourceElementId, TargetElementId = targetElementId });
+                    return $"Added arched arrow from {sourceElementId} to {targetElementId}";
+                },
+                new AIFunctionFactoryOptions
+                {
+                    Name = "add_arrow_between_selection",
+                    Description = "Create an arched arrow connecting from a source element to a target element. Use the first selected element as source and the last selected element as target when the user asks for an arrow between selected elements.",
+                    AdditionalProperties = skipPermission,
+                }),
+
+            AIFunctionFactory.Create(
                 () =>
                 {
                     return JsonSerializer.Serialize(new
@@ -297,7 +311,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             You are an SVG editor assistant. The user will describe edits they want to make to an SVG document.
             You MUST use the provided tools to execute the edits. Do NOT output raw SVG or code.
 
-            Available tools: set_fill, set_stroke, move_element, move_selection, align_selection, get_selection, get_document_summary.
+            Available tools: set_fill, set_stroke, move_element, move_selection, align_selection, add_arrow_between_selection, get_selection, get_document_summary.
 
             Current document state:
             - Canvas size: {context.Canvas.Width}x{context.Canvas.Height}
@@ -310,6 +324,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             - For color values, use hex format (#RRGGBB). Convert named colors to hex.
             - When the user says "the selected element" or similar, use the selected element IDs.
             - For move commands on all selected elements, use move_selection instead of move_element.
+            - When the user asks to draw an arrow between two selected elements, use add_arrow_between_selection with the first selected element as source and the last as target.
             - Call the tools first, then provide a brief summary of what you did.
             - Do not use any tools other than the ones listed above.
             """;
@@ -324,6 +339,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             MoveElementCommand m => $"Move {m.ElementId} by ({m.Dx}, {m.Dy})",
             MoveSelectionCommand ms => $"Move selection by ({ms.Dx}, {ms.Dy})",
             AlignSelectionCommand a => $"Align selection {a.Alignment}",
+            AddArrowBetweenSelectionCommand arr => $"Add arched arrow from {arr.SourceElementId} to {arr.TargetElementId}",
             _ => "Unknown command"
         });
         return string.Join(". ", parts) + ".";

@@ -313,4 +313,49 @@ public sealed class CommandValidationServiceTests
         Assert.IsFalse(result.IsValid);
         Assert.IsTrue(result.Issues.Any(i => i.Contains("range")));
     }
+
+    [TestMethod]
+    public void Validate_ValidAddArrowBetweenSelectionCommand_ReturnsValid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand { SourceElementId = "rect-1", TargetElementId = "rect-2" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.IsEmpty(result.Issues);
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowBetweenSelection_UnknownSource_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand { SourceElementId = "nonexistent", TargetElementId = "rect-2" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("not found")));
+    }
+
+    [TestMethod]
+    public void Validate_AddArrowBetweenSelection_SameSourceAndTarget_ReturnsInvalid()
+    {
+        var context = CreateContext("rect-1");
+        var commands = new List<SvgCommand>
+        {
+            new AddArrowBetweenSelectionCommand { SourceElementId = "rect-1", TargetElementId = "rect-1" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("different")));
+    }
 }

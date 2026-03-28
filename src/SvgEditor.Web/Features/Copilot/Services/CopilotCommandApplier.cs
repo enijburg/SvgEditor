@@ -1,3 +1,4 @@
+using System.Globalization;
 using SvgEditor.Web.Features.Canvas.Models;
 using SvgEditor.Web.Features.Canvas.UpdateElement;
 using SvgEditor.Web.Features.Copilot.Models;
@@ -38,7 +39,7 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
                     element.Attributes["stroke"] = command.Stroke;
                     if (command.Width.HasValue)
                     {
-                        element.Attributes["stroke-width"] = command.Width.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        element.Attributes["stroke-width"] = command.Width.Value.ToString(CultureInfo.InvariantCulture);
                     }
 
                     // Update marker colors (arrowheads) to match the new stroke color
@@ -92,7 +93,134 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
             case "AlignSelection":
                 ApplyAlignment(command.Alignment ?? "center");
                 break;
+
+            case "AddArrowBetweenSelection" when command.SourceElementId is not null && command.TargetElementId is not null:
+                ApplyAddArrowBetweenSelection(command.SourceElementId, command.TargetElementId);
+                break;
         }
+    }
+
+    public static (SvgUnknown Defs, SvgPath Arrow) BuildArrowElements(
+        BoundingBox sourceBBox,
+        BoundingBox targetBBox,
+        string markerId,
+        string arrowId)
+    {
+        var inv = CultureInfo.InvariantCulture;
+
+        // Compute center points of source and target elements
+        var sx = sourceBBox.X + (sourceBBox.Width / 2);
+        var sy = sourceBBox.Y + (sourceBBox.Height / 2);
+        var tx = targetBBox.X + (targetBBox.Width / 2);
+        var ty = targetBBox.Y + (targetBBox.Height / 2);
+
+        // Compute perpendicular offset for the arc control point
+        var dx = tx - sx;
+        var dy = ty - sy;
+        var dist = Math.Sqrt((dx * dx) + (dy * dy));
+
+        // Arc height is 20% of the distance between centers (clamped to a minimum)
+        var arcOffset = Math.Max(dist * 0.2, 30);
+
+        // Perpendicular direction (rotate 90 degrees)
+        double px, py;
+        if (dist > 0)
+        {
+            px = -dy / dist;
+            py = dx / dist;
+        }
+        else
+        {
+            px = 0;
+            py = -1;
+        }
+
+        // Control point for the quadratic bezier curve
+        var cx = ((sx + tx) / 2) + (px * arcOffset);
+        var cy = ((sy + ty) / 2) + (py * arcOffset);
+
+        // Build arrowhead marker as a defs element
+        var markerXml = $"""<marker xmlns="http://www.w3.org/2000/svg" id="{markerId}" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#333333" /></marker>""";
+        var defs = new SvgUnknown("defs")
+        {
+            Id = Guid.NewGuid().ToString(),
+            Attributes = [],
+            InnerXml = markerXml
+        };
+
+        // Build the arched arrow path using a quadratic bezier curve
+        var pathD = string.Create(inv, $"M {sx} {sy} Q {cx} {cy} {tx} {ty}");
+        var arrow = new SvgPath
+        {
+            Id = arrowId,
+            Attributes = new Dictionary<string, string>
+            {
+                ["d"] = pathD,
+                ["fill"] = "none",
+                ["stroke"] = "#333333",
+                ["stroke-width"] = "2",
+                ["marker-end"] = $"url(#{markerId})",
+                ["data-element-id"] = arrowId
+            }
+        };
+
+        return (defs, arrow);
+    }
+
+    private void ApplyAddArrowBetweenSelection(string sourceElementId, string targetElementId)
+    {
+        if (editorState.Document is null)
+            return;
+
+        var source = editorState.Document.FindById(sourceElementId);
+        var target = editorState.Document.FindById(targetElementId);
+        if (source is null || target is null)
+            return;
+
+        var sourceBBox = source.GetBoundingBox();
+        var targetBBox = target.GetBoundingBox();
+        if (sourceBBox is null || targetBBox is null)
+            return;
+
+        var markerId = $"arrowhead-{Guid.NewGuid():N}";
+        var arrowId = Guid.NewGuid().ToString();
+
+        var (defs, arrow) = BuildArrowElements(sourceBBox, targetBBox, markerId, arrowId);
+
+        // Add defs and arrow path to the document
+        var doc = editorState.Document;
+        var newElements = new List<SvgElement>(doc.Elements.Count + 2);
+
+        // Insert defs before other elements (at the start, or after existing defs)
+        var defsInserted = false;
+        foreach (var el in doc.Elements)
+        {
+            if (!defsInserted && el is not SvgUnknown { Tag: "defs" })
+            {
+                newElements.Add(defs);
+                defsInserted = true;
+            }
+
+            newElements.Add(el);
+        }
+
+        if (!defsInserted)
+        {
+            newElements.Add(defs);
+        }
+
+        newElements.Add(arrow);
+
+        editorState.Document = new SvgDocument
+        {
+            ViewBox = doc.ViewBox,
+            Width = doc.Width,
+            Height = doc.Height,
+            Elements = newElements,
+            Attributes = new Dictionary<string, string>(doc.Attributes)
+        };
+
+        editorState.NotifyStateChanged();
     }
 
     private void ApplyAlignment(string alignment)

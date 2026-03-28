@@ -136,4 +136,105 @@ public sealed class CopilotCommandApplierTests
         Assert.Contains("fill=\"#000000\"", updatedDefs.InnerXml, StringComparison.Ordinal);
         Assert.Contains("fill=\"#00ff00\"", updatedDefs.InnerXml, StringComparison.Ordinal);
     }
+
+    [TestMethod]
+    public async Task AddArrowBetweenSelection_CreatesArchedArrowPath()
+    {
+        var r1 = new SvgRect
+        {
+            Id = "r1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x"] = "50", ["y"] = "50", ["width"] = "100", ["height"] = "60"
+            }
+        };
+        var r2 = new SvgRect
+        {
+            Id = "r2",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x"] = "300", ["y"] = "200", ["width"] = "100", ["height"] = "60"
+            }
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [r1, r2] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand { Type = "AddArrowBetweenSelection", SourceElementId = "r1", TargetElementId = "r2" }
+        ], "test arrow");
+
+        var doc = state.Document!;
+
+        // Should have defs + r1 + r2 + arrow path = 4 elements
+        Assert.HasCount(4, doc.Elements);
+
+        // First element should be a defs with a marker
+        var defs = doc.Elements.OfType<SvgUnknown>().FirstOrDefault(e => e.Tag == "defs");
+        Assert.IsNotNull(defs);
+        Assert.Contains("marker", defs.InnerXml, StringComparison.Ordinal);
+        Assert.Contains("polygon", defs.InnerXml, StringComparison.Ordinal);
+
+        // Last element should be the arrow path
+        var arrow = doc.Elements.OfType<SvgPath>().FirstOrDefault();
+        Assert.IsNotNull(arrow);
+        Assert.AreEqual("none", arrow.Attributes["fill"]);
+        Assert.AreEqual("#333333", arrow.Attributes["stroke"]);
+        Assert.IsTrue(arrow.Attributes["marker-end"].StartsWith("url(#arrowhead-", StringComparison.Ordinal));
+
+        // Path should contain a quadratic bezier curve (Q command)
+        Assert.Contains("M ", arrow.D, StringComparison.Ordinal);
+        Assert.Contains(" Q ", arrow.D, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task AddArrowBetweenSelection_MissingElement_DoesNotCrash()
+    {
+        var r1 = new SvgRect
+        {
+            Id = "r1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x"] = "50", ["y"] = "50", ["width"] = "100", ["height"] = "60"
+            }
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [r1] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand { Type = "AddArrowBetweenSelection", SourceElementId = "r1", TargetElementId = "nonexistent" }
+        ], "test arrow");
+
+        // Document should be unchanged
+        Assert.HasCount(1, state.Document!.Elements);
+    }
+
+    [TestMethod]
+    public void BuildArrowElements_CreatesCorrectArcBetweenElements()
+    {
+        var sourceBBox = new BoundingBox(50, 50, 100, 60);
+        var targetBBox = new BoundingBox(300, 200, 100, 60);
+
+        var (defs, arrow) = CopilotCommandApplier.BuildArrowElements(
+            sourceBBox, targetBBox, "test-marker", "test-arrow");
+
+        // Defs should contain the marker
+        Assert.AreEqual("defs", defs.Tag);
+        Assert.Contains("id=\"test-marker\"", defs.InnerXml, StringComparison.Ordinal);
+
+        // Arrow should reference the marker
+        Assert.AreEqual("test-arrow", arrow.Id);
+        Assert.AreEqual("url(#test-marker)", arrow.Attributes["marker-end"]);
+
+        // Path should start at source center (100, 80) and end at target center (350, 230)
+        Assert.Contains("M 100 80", arrow.D, StringComparison.Ordinal);
+        Assert.Contains("350 230", arrow.D, StringComparison.Ordinal);
+    }
 }

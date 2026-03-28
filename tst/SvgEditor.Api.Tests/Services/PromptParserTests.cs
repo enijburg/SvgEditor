@@ -128,6 +128,26 @@ public sealed class CopilotPlanningServiceToolTests
     }
 
     [TestMethod]
+    public async Task AddArrowBetweenSelectionTool_AddsCommand()
+    {
+        var context = CreateContext("rect-1", "rect-2");
+        var (commands, result) = await InvokeToolAsync("add_arrow_between_selection", new Dictionary<string, object?>
+        {
+            ["sourceElementId"] = "rect-1",
+            ["targetElementId"] = "rect-2",
+        }, context);
+
+        Assert.HasCount(1, commands);
+        var cmd = commands[0] as AddArrowBetweenSelectionCommand;
+        Assert.IsNotNull(cmd);
+        Assert.AreEqual("rect-1", cmd.SourceElementId);
+        Assert.AreEqual("rect-2", cmd.TargetElementId);
+        Assert.IsNotNull(result);
+        Assert.Contains("rect-1", result.ToString()!);
+        Assert.Contains("rect-2", result.ToString()!);
+    }
+
+    [TestMethod]
     public async Task GetSelectionTool_ReturnsSelectedElements()
     {
         var context = CreateContext("rect-1", "rect-2");
@@ -160,7 +180,7 @@ public sealed class CopilotPlanningServiceToolTests
         var commands = new List<SvgCommand>();
         var tools = CopilotPlanningService.CreateToolsForTesting(context, commands);
 
-        Assert.HasCount(7, tools);
+        Assert.HasCount(8, tools);
 
         var toolNames = tools.Select(t => t.Name).ToList();
         Assert.Contains("set_fill", toolNames);
@@ -168,6 +188,7 @@ public sealed class CopilotPlanningServiceToolTests
         Assert.Contains("move_element", toolNames);
         Assert.Contains("move_selection", toolNames);
         Assert.Contains("align_selection", toolNames);
+        Assert.Contains("add_arrow_between_selection", toolNames);
         Assert.Contains("get_selection", toolNames);
         Assert.Contains("get_document_summary", toolNames);
     }
