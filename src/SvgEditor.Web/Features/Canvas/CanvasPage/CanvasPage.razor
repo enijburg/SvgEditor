@@ -1,6 +1,7 @@
 @page "/"
 @using Microsoft.JSInterop
 @using SvgEditor.Web.Features.Canvas.Models
+@using SvgEditor.Web.Features.Canvas.DeleteElement
 @using SvgEditor.Web.Features.Canvas.ResizeElement
 @using SvgEditor.Web.Features.Canvas.SelectElement
 @using SvgEditor.Web.Features.Canvas.UpdateElement
@@ -325,6 +326,40 @@
             case "redo":
                 await Mediator.Send(new RedoCommand());
                 break;
+            case "delete":
+                if (EditorState.SelectedElementIds.Count > 0)
+                {
+                    await Mediator.Send(new PushHistoryCommand("Delete element"));
+                    await Mediator.Send(new DeleteElementCommand(EditorState.SelectedElementIds));
+                }
+                break;
+            case "arrowup":
+                await MoveSelectionAsync(0, -1);
+                break;
+            case "arrowdown":
+                await MoveSelectionAsync(0, 1);
+                break;
+            case "arrowleft":
+                await MoveSelectionAsync(-1, 0);
+                break;
+            case "arrowright":
+                await MoveSelectionAsync(1, 0);
+                break;
+        }
+    }
+
+    private async Task MoveSelectionAsync(double dx, double dy)
+    {
+        if (EditorState.SelectedElementIds.Count == 0) return;
+
+        await Mediator.Send(new PushHistoryCommand("Move element"));
+        if (EditorState.SelectedElementIds.Count > 1)
+        {
+            await Mediator.Send(new UpdateMultipleElementsCommand(EditorState.SelectedElementIds, dx, dy));
+        }
+        else
+        {
+            await Mediator.Send(new UpdateElementCommand(EditorState.SelectedElementIds.First(), dx, dy));
         }
     }
 

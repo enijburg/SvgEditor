@@ -25,7 +25,7 @@ builder.Services.AddSingleton<IStorageService, BrowserStorageService>();
 builder.Services.AddSingleton<AutoSaveService>();
 
 builder.Services.AddSingleton<EditorContextBuilder>();
-builder.Services.AddSingleton<CopilotCommandApplier>();
+builder.Services.AddScoped<CopilotCommandApplier>();
 builder.Services.AddHttpClient<CopilotApiClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["services:svgeditor-api:https:0"]
