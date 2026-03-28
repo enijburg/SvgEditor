@@ -1,0 +1,206 @@
+@using SvgEditor.Web.Features.Canvas.Models
+@using SvgEditor.Web.Features.Copilot.Models
+@using SvgEditor.Web.Features.Copilot.Services
+@inject CopilotApiClient ApiClient
+@inject EditorContextBuilder ContextBuilder
+@inject CopilotCommandApplier CommandApplier
+@inject EditorState EditorState
+
+<div class="copilot-panel">
+    <h5 class="copilot-title">✨ Copilot</h5>
+
+    <div class="copilot-input-area">
+        <input type="text"
+               class="copilot-input"
+               placeholder="e.g. Make the selected rectangle blue"
+               @bind="_prompt"
+               @bind:event="oninput"
+               @onkeydown="OnKeyDown"
+               disabled="@_isLoading" />
+        <button class="copilot-send-btn"
+                @onclick="OnPlanClicked"
+                disabled="@(string.IsNullOrWhiteSpace(_prompt) || _isLoading || EditorState.Document is null)">
+            @if (_isLoading)
+            {
+                <span>⏳</span>
+            }
+            else
+            {
+                <span>Send</span>
+            }
+        </button>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="copilot-error">
+            ⚠️ @_errorMessage
+        </div>
+    }
+
+    @if (_planResponse is not null)
+    {
+        <div class="copilot-plan">
+            <div class="copilot-summary">
+                📋 @_planResponse.Summary
+            </div>
+
+            @if (_planResponse.Commands.Count > 0)
+            {
+                <div class="copilot-commands">
+                    @foreach (var cmd in _planResponse.Commands)
+                    {
+                        <div class="copilot-command">
+                            <span class="command-type">@cmd.Type</span>
+                            @if (cmd.ElementId is not null)
+                            {
+                                <span class="command-target">→ @cmd.ElementId</span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!_planResponse.Validation.IsValid)
+            {
+                <div class="copilot-validation-errors">
+                    @foreach (var issue in _planResponse.Validation.Issues)
+                    {
+                        <div class="validation-issue">❌ @issue</div>
+                    }
+                </div>
+            }
+
+            @if (_planResponse.Validation.IsValid && _planResponse.Commands.Count > 0)
+            {
+                <div class="copilot-actions">
+                    <button class="copilot-apply-btn" @onclick="OnApplyClicked" disabled="@_isApplying">
+                        @if (_isApplying)
+                        {
+                            <span>Applying…</span>
+                        }
+                        else
+                        {
+                            <span>✅ Apply</span>
+                        }
+                    </button>
+                    <button class="copilot-dismiss-btn" @onclick="OnDismissClicked">
+                        Dismiss
+                    </button>
+                </div>
+            }
+        </div>
+    }
+
+    @if (_applyResult is not null)
+    {
+        <div class="copilot-result @(_applyResult.Success ? "success" : "failure")">
+            @(_applyResult.Success ? "✅" : "❌") @_applyResult.Message
+        </div>
+    }
+</div>
+
+@code {
+    private string _prompt = "";
+    private bool _isLoading;
+    private bool _isApplying;
+    private string? _errorMessage;
+    private CopilotPlanResponse? _planResponse;
+    private CopilotApplyResponse? _applyResult;
+    private CopilotEditorContext? _planContext;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_prompt) && !_isLoading)
+        {
+            await OnPlanClicked();
+        }
+    }
+
+    private async Task OnPlanClicked()
+    {
+        _errorMessage = null;
+        _planResponse = null;
+        _applyResult = null;
+        _isLoading = true;
+
+        try
+        {
+            _planContext = ContextBuilder.Build();
+            var request = new CopilotPlanRequest
+            {
+                Prompt = _prompt,
+                Context = _planContext
+            };
+
+            _planResponse = await ApiClient.PlanAsync(request);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to get plan: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnApplyClicked()
+    {
+        if (_planResponse is null || _planContext is null)
+            return;
+
+        _isApplying = true;
+        _applyResult = null;
+        _errorMessage = null;
+
+        try
+        {
+            // Server-side validation
+            var applyRequest = new CopilotApplyRequest
+            {
+                Commands = _planResponse.Commands,
+                DocumentVersion = _planContext.DocumentVersion,
+                Context = _planContext
+            };
+
+            var serverResult = await ApiClient.ApplyAsync(applyRequest);
+
+            if (serverResult is null || !serverResult.Success)
+            {
+                _applyResult = serverResult ?? new CopilotApplyResponse
+                {
+                    Success = false,
+                    Message = "Server returned an empty response.",
+                    AppliedCommands = 0
+                };
+                return;
+            }
+
+            // Apply commands locally as a single undoable transaction
+            await CommandApplier.ApplyCommandsAsync(_planResponse.Commands, $"Copilot: {_planResponse.Summary}");
+            ContextBuilder.IncrementVersion();
+
+            _applyResult = serverResult;
+            _planResponse = null;
+            _planContext = null;
+            _prompt = "";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to apply: {ex.Message}";
+        }
+        finally
+        {
+            _isApplying = false;
+        }
+    }
+
+    private void OnDismissClicked()
+    {
+        _planResponse = null;
+        _planContext = null;
+        _applyResult = null;
+        _errorMessage = null;
+    }
+}

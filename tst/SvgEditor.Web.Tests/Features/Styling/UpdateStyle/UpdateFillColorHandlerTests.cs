@@ -229,4 +229,168 @@ public sealed class UpdateFillColorHandlerTests
         Assert.Contains("fill=\"#00ff00\"", updatedDefs.InnerXml, StringComparison.Ordinal);
         Assert.Contains("stroke=\"#00ff00\"", updatedDefs.InnerXml, StringComparison.Ordinal);
     }
+
+    [TestMethod]
+    public async Task Handle_SharedMarker_ClonesForSelectedElement()
+    {
+        // Two lines sharing the same marker definition
+        var defs = new SvgUnknown("defs")
+        {
+            Id = "d1",
+            Attributes = [],
+            InnerXml = """<marker xmlns="http://www.w3.org/2000/svg" id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" /></marker>"""
+        };
+        var line1 = new SvgLine
+        {
+            Id = "l1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100",
+                ["stroke"] = "#e74c3c",
+                ["marker-end"] = "url(#arrowhead)"
+            }
+        };
+        var line2 = new SvgLine
+        {
+            Id = "l2",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x1"] = "200", ["y1"] = "0", ["x2"] = "300", ["y2"] = "100",
+                ["stroke"] = "#e74c3c",
+                ["marker-end"] = "url(#arrowhead)"
+            }
+        };
+        var state = CreateState(defs, line1, line2);
+        var handler = new UpdateFillColorHandler(state);
+
+        // Change color of only line1
+        await handler.Handle(new UpdateFillColorCommand(["l1"], "#00ff00"));
+
+        // line1's stroke should be updated
+        var updatedLine1 = state.Document!.FindById("l1")!;
+        Assert.AreEqual("#00ff00", updatedLine1.Attributes["stroke"]);
+
+        // line2 should still reference the original marker and retain original stroke
+        var updatedLine2 = state.Document!.FindById("l2")!;
+        Assert.AreEqual("#e74c3c", updatedLine2.Attributes["stroke"]);
+        Assert.AreEqual("url(#arrowhead)", updatedLine2.Attributes["marker-end"]);
+
+        // line1 should now reference a new cloned marker (not the original)
+        Assert.AreNotEqual("url(#arrowhead)", updatedLine1.Attributes["marker-end"]);
+        Assert.IsTrue(updatedLine1.Attributes["marker-end"].StartsWith("url(#arrowhead-", StringComparison.Ordinal));
+
+        // The original marker in defs should retain the original color
+        var updatedDefs = (SvgUnknown)state.Document.Elements.First(e => e is SvgUnknown { Tag: "defs" });
+        Assert.Contains("id=\"arrowhead\"", updatedDefs.InnerXml, StringComparison.Ordinal);
+        Assert.Contains("fill=\"#e74c3c\"", updatedDefs.InnerXml, StringComparison.Ordinal);
+
+        // The cloned marker should have the new color
+        Assert.Contains("fill=\"#00ff00\"", updatedDefs.InnerXml, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task Handle_SharedMarker_MultipleMarkerAttributes_ClonesAll()
+    {
+        // Line with both marker-start and marker-end shared with another line
+        var defs = new SvgUnknown("defs")
+        {
+            Id = "d1",
+            Attributes = [],
+            InnerXml = """<marker xmlns="http://www.w3.org/2000/svg" id="arrow-start" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 3.5, 10 0, 10 7" fill="#ff0000" /></marker><marker xmlns="http://www.w3.org/2000/svg" id="arrow-end" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ff0000" /></marker>"""
+        };
+        var line1 = new SvgLine
+        {
+            Id = "l1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100",
+                ["stroke"] = "#ff0000",
+                ["marker-start"] = "url(#arrow-start)",
+                ["marker-end"] = "url(#arrow-end)"
+            }
+        };
+        var line2 = new SvgLine
+        {
+            Id = "l2",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x1"] = "200", ["y1"] = "0", ["x2"] = "300", ["y2"] = "100",
+                ["stroke"] = "#ff0000",
+                ["marker-start"] = "url(#arrow-start)",
+                ["marker-end"] = "url(#arrow-end)"
+            }
+        };
+        var state = CreateState(defs, line1, line2);
+        var handler = new UpdateFillColorHandler(state);
+
+        await handler.Handle(new UpdateFillColorCommand(["l1"], "#0000ff"));
+
+        // line2 should still reference original markers
+        var updatedLine2 = state.Document!.FindById("l2")!;
+        Assert.AreEqual("url(#arrow-start)", updatedLine2.Attributes["marker-start"]);
+        Assert.AreEqual("url(#arrow-end)", updatedLine2.Attributes["marker-end"]);
+
+        // line1 should reference cloned markers
+        var updatedLine1 = state.Document!.FindById("l1")!;
+        Assert.IsTrue(updatedLine1.Attributes["marker-start"].StartsWith("url(#arrow-start-", StringComparison.Ordinal));
+        Assert.IsTrue(updatedLine1.Attributes["marker-end"].StartsWith("url(#arrow-end-", StringComparison.Ordinal));
+
+        // Original markers should keep original color
+        var updatedDefs = (SvgUnknown)state.Document.Elements.First(e => e is SvgUnknown { Tag: "defs" });
+        Assert.Contains("id=\"arrow-start\"", updatedDefs.InnerXml, StringComparison.Ordinal);
+        Assert.Contains("id=\"arrow-end\"", updatedDefs.InnerXml, StringComparison.Ordinal);
+
+        // Cloned markers should have new color
+        Assert.Contains("fill=\"#0000ff\"", updatedDefs.InnerXml, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task Handle_PartiallySharedMarker_OnlyClonesSharedOnes()
+    {
+        // Line1 has marker-start (exclusive) and marker-end (shared with line2)
+        var defs = new SvgUnknown("defs")
+        {
+            Id = "d1",
+            Attributes = [],
+            InnerXml = """<marker xmlns="http://www.w3.org/2000/svg" id="exclusive-start" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 3.5, 10 0, 10 7" fill="#ff0000" /></marker><marker xmlns="http://www.w3.org/2000/svg" id="shared-end" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ff0000" /></marker>"""
+        };
+        var line1 = new SvgLine
+        {
+            Id = "l1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100",
+                ["stroke"] = "#ff0000",
+                ["marker-start"] = "url(#exclusive-start)",
+                ["marker-end"] = "url(#shared-end)"
+            }
+        };
+        var line2 = new SvgLine
+        {
+            Id = "l2",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x1"] = "200", ["y1"] = "0", ["x2"] = "300", ["y2"] = "100",
+                ["stroke"] = "#ff0000",
+                ["marker-end"] = "url(#shared-end)"
+            }
+        };
+        var state = CreateState(defs, line1, line2);
+        var handler = new UpdateFillColorHandler(state);
+
+        await handler.Handle(new UpdateFillColorCommand(["l1"], "#0000ff"));
+
+        var updatedLine1 = state.Document!.FindById("l1")!;
+
+        // exclusive-start should be updated in place (not cloned)
+        Assert.AreEqual("url(#exclusive-start)", updatedLine1.Attributes["marker-start"]);
+
+        // shared-end should be cloned
+        Assert.IsTrue(updatedLine1.Attributes["marker-end"].StartsWith("url(#shared-end-", StringComparison.Ordinal));
+
+        // Original shared-end should retain old color
+        var updatedDefs = (SvgUnknown)state.Document.Elements.First(e => e is SvgUnknown { Tag: "defs" });
+        // The original "exclusive-start" should have new color (updated in place)
+        Assert.Contains("id=\"exclusive-start\"", updatedDefs.InnerXml, StringComparison.Ordinal);
+    }
 }
