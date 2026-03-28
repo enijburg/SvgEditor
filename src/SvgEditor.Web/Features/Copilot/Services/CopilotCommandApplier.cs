@@ -41,6 +41,14 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
                         element.Attributes["stroke-width"] = command.Width.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
                     }
 
+                    // Update marker colors (arrowheads) to match the new stroke color
+                    var markerIds = new HashSet<string>(StringComparer.Ordinal);
+                    UpdateFillColorHandler.CollectReferencedMarkerIds(element, markerIds);
+                    if (markerIds.Count > 0 && editorState.Document is not null)
+                    {
+                        UpdateFillColorHandler.UpdateMarkerColors(editorState.Document.Elements, markerIds, command.Stroke);
+                    }
+
                     editorState.NotifyStateChanged();
                 }
 
