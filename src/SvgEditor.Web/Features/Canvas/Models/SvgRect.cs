@@ -50,6 +50,19 @@ public sealed class SvgRect : SvgElement
         return new SvgRect { Id = Id, Attributes = attrs };
     }
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated)
+    {
+        var (nx, ny, nw, nh) = MapRect(X, Y, Width, Height, original, updated);
+        var attrs = new Dictionary<string, string>(Attributes)
+        {
+            ["x"] = FormatDouble(nx),
+            ["y"] = FormatDouble(ny),
+            ["width"] = FormatDouble(nw),
+            ["height"] = FormatDouble(nh)
+        };
+        return new SvgRect { Id = Id, Attributes = attrs };
+    }
+
     public override SvgElement DeepClone() => new SvgRect { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
     public override BoundingBox? GetBoundingBox() => new BoundingBox(X, Y, Width, Height);

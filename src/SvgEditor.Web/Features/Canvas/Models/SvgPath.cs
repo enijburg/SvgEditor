@@ -18,6 +18,20 @@ public sealed class SvgPath : SvgElement
         return new SvgPath { Id = Id, Attributes = attrs };
     }
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated)
+    {
+        // Apply a scale/translate via transform attribute
+        var sx = original.Width > 0 ? updated.Width / original.Width : 1;
+        var sy = original.Height > 0 ? updated.Height / original.Height : 1;
+        var tx = updated.X - original.X * sx;
+        var ty = updated.Y - original.Y * sy;
+        var attrs = new Dictionary<string, string>(Attributes)
+        {
+            ["transform"] = $"translate({FormatDoubleStatic(tx)},{FormatDoubleStatic(ty)}) scale({FormatDoubleStatic(sx)},{FormatDoubleStatic(sy)})"
+        };
+        return new SvgPath { Id = Id, Attributes = attrs };
+    }
+
     public override SvgElement DeepClone() => new SvgPath { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
     public override BoundingBox? GetBoundingBox()

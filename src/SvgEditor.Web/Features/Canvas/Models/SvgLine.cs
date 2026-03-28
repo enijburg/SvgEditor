@@ -40,6 +40,20 @@ public sealed class SvgLine : SvgElement
         return new SvgLine { Id = Id, Attributes = attrs };
     }
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated)
+    {
+        var (nx1, ny1) = MapPoint(X1, Y1, original, updated);
+        var (nx2, ny2) = MapPoint(X2, Y2, original, updated);
+        var attrs = new Dictionary<string, string>(Attributes)
+        {
+            ["x1"] = FormatDouble(nx1),
+            ["y1"] = FormatDouble(ny1),
+            ["x2"] = FormatDouble(nx2),
+            ["y2"] = FormatDouble(ny2)
+        };
+        return new SvgLine { Id = Id, Attributes = attrs };
+    }
+
     public override SvgElement DeepClone() => new SvgLine { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
     public override BoundingBox? GetBoundingBox()

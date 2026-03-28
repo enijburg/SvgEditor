@@ -16,6 +16,17 @@ public sealed class SvgGroup : SvgElement
         };
     }
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated)
+    {
+        var resizedChildren = Children.Select(c => c.WithResize(original, updated)).ToList();
+        return new SvgGroup
+        {
+            Id = Id,
+            Attributes = new Dictionary<string, string>(Attributes),
+            Children = resizedChildren
+        };
+    }
+
     public override SvgElement DeepClone() => new SvgGroup
     {
         Id = Id,

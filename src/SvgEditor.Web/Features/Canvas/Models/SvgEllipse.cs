@@ -38,6 +38,19 @@ public sealed class SvgEllipse : SvgElement
         return new SvgEllipse { Id = Id, Attributes = attrs };
     }
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated)
+    {
+        var (nx, ny, nw, nh) = MapRect(Cx - Rx, Cy - Ry, Rx * 2, Ry * 2, original, updated);
+        var attrs = new Dictionary<string, string>(Attributes)
+        {
+            ["cx"] = FormatDouble(nx + nw / 2),
+            ["cy"] = FormatDouble(ny + nh / 2),
+            ["rx"] = FormatDouble(nw / 2),
+            ["ry"] = FormatDouble(nh / 2)
+        };
+        return new SvgEllipse { Id = Id, Attributes = attrs };
+    }
+
     public override SvgElement DeepClone() => new SvgEllipse { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
     public override BoundingBox? GetBoundingBox() => new BoundingBox(Cx - Rx, Cy - Ry, Rx * 2, Ry * 2);

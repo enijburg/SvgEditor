@@ -13,6 +13,9 @@ public sealed class SvgPolygon : SvgElement
     public override SvgElement WithOffset(double dx, double dy) =>
         new SvgPolygon { Id = Id, Attributes = new Dictionary<string, string>(Attributes) { ["points"] = TranslatePoints(Points, dx, dy) } };
 
+    public override SvgElement WithResize(BoundingBox original, BoundingBox updated) =>
+        new SvgPolygon { Id = Id, Attributes = new Dictionary<string, string>(Attributes) { ["points"] = ScalePoints(Points, original, updated) } };
+
     public override SvgElement DeepClone() => new SvgPolygon { Id = Id, Attributes = new Dictionary<string, string>(Attributes) };
 
     public override BoundingBox? GetBoundingBox() => ComputePointsBoundingBox(Points);
@@ -59,6 +62,28 @@ public sealed class SvgPolygon : SvgElement
                 result.Append(FormatDouble(x + dx));
                 result.Append(',');
                 result.Append(FormatDouble(y + dy));
+            }
+        }
+        return result.ToString();
+    }
+
+    internal static string ScalePoints(string points, BoundingBox original, BoundingBox updated)
+    {
+        var pairs = points.Trim().Split([' ', ','], StringSplitOptions.RemoveEmptyEntries);
+        var result = new System.Text.StringBuilder();
+        var sx = original.Width > 0 ? updated.Width / original.Width : 1;
+        var sy = original.Height > 0 ? updated.Height / original.Height : 1;
+        for (int i = 0; i + 1 < pairs.Length; i += 2)
+        {
+            if (i > 0) result.Append(' ');
+            if (double.TryParse(pairs[i], System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var x) &&
+                double.TryParse(pairs[i + 1], System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var y))
+            {
+                result.Append(FormatDouble(updated.X + (x - original.X) * sx));
+                result.Append(',');
+                result.Append(FormatDouble(updated.Y + (y - original.Y) * sy));
             }
         }
         return result.ToString();
