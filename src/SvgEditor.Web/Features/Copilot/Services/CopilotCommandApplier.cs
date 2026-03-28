@@ -271,9 +271,10 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         if (string.IsNullOrWhiteSpace(anchor))
             return "border";
 
-        return anchor.ToLowerInvariant() switch
+        var lower = anchor.ToLowerInvariant();
+        return lower switch
         {
-            "center" or "left" or "right" or "top" or "bottom" => anchor.ToLowerInvariant(),
+            "center" or "left" or "right" or "top" or "bottom" => lower,
             _ => "border"
         };
     }

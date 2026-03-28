@@ -266,7 +266,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
                 new AIFunctionFactoryOptions
                 {
                     Name = "add_arrow_between_selection",
-                    Description = "Create an arched arrow connecting from a source element to a target element. Supports optional stroke color, width, dash pattern, and anchor modes. Anchor modes control where the arrow starts/ends: 'border' (auto-detect closest edge, default), 'left'/'right'/'top'/'bottom' (midpoint of that edge), or 'center' (element center). For arrows going right, use sourceAnchor='right'; for arrows going left, use sourceAnchor='left'. Use the first selected element as source and the last selected element as target when the user asks for an arrow between selected elements.",
+                    Description = "Create an arched arrow from source to target element. Supports stroke color/width/dash and anchor modes: 'border' (auto-detect edge, default), 'left'/'right'/'top'/'bottom' (midpoint of that edge), or 'center'. Use the first selected element as source and the last as target.",
                     AdditionalProperties = skipPermission,
                 }),
 
@@ -339,7 +339,9 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             - When the user says "the selected element" or similar, use the selected element IDs.
             - For move commands on all selected elements, use move_selection instead of move_element.
             - When the user asks to draw an arrow between two selected elements, use add_arrow_between_selection with the first selected element as source and the last as target. Include stroke, strokeWidth, and strokeDashArray parameters directly in the tool call for styling (e.g. dashed arrows). Do NOT use set_stroke on the arrow afterwards.
-            - Arrow anchor modes: use sourceAnchor/targetAnchor to control where the arrow connects. Options: 'border' (auto-detect closest edge, default), 'left', 'right', 'top', 'bottom' (midpoint of that edge), or 'center' (element center). When the user says "from border to border", use sourceAnchor='border' and targetAnchor='border'. When a target is to the right of the source, prefer sourceAnchor='right' and targetAnchor='left'. When the user explicitly names a side (e.g. "from the top"), use that side as the anchor.
+            - Arrow anchor modes: use sourceAnchor/targetAnchor to control where the arrow connects. Options: 'border' (auto-detect closest edge, default), 'left', 'right', 'top', 'bottom' (midpoint of that edge), or 'center' (element center).
+            - When the user says "from border to border", use sourceAnchor='border' and targetAnchor='border'.
+            - When a target is to the right of the source, prefer sourceAnchor='right' and targetAnchor='left'. When the user explicitly names a side (e.g. "from the top"), use that side as the anchor.
             - Call the tools first, then provide a brief summary of what you did.
             - Do not use any tools other than the ones listed above.
             """;
