@@ -105,6 +105,10 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
             case "AddArrowBetweenSelection" when command.SourceElementId is not null && command.TargetElementId is not null:
                 ApplyAddArrowBetweenSelection(command.SourceElementId, command.TargetElementId, command.Stroke, command.Width, command.StrokeDashArray, command.SourceAnchor, command.TargetAnchor);
                 break;
+
+            case "PlaceTextOnLine" when command.LineElementId is not null && command.TextElementId is not null:
+                ApplyPlaceTextOnLine(command.LineElementId, command.TextElementId);
+                break;
         }
     }
 
@@ -353,6 +357,40 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
             Attributes = new Dictionary<string, string>(doc.Attributes)
         };
 
+        editorState.NotifyStateChanged();
+    }
+
+    private void ApplyPlaceTextOnLine(string lineElementId, string textElementId)
+    {
+        if (editorState.Document is null)
+            return;
+
+        var lineElement = editorState.Document.FindById(lineElementId);
+        var textElement = editorState.Document.FindById(textElementId);
+
+        if (textElement is not SvgText text)
+            return;
+
+        // Derive path data from the source element.
+        // SvgLine → use ToPathData(); SvgPath (e.g. arrow) → use its d attribute directly.
+        string? pathData = lineElement switch
+        {
+            SvgLine line => line.ToPathData(),
+            SvgPath path => path.D,
+            _ => null
+        };
+
+        if (pathData is null)
+            return;
+
+        var updatedAttrs = new Dictionary<string, string>(text.Attributes)
+        {
+            ["data-line-id"] = lineElementId,
+            ["path"] = pathData
+        };
+
+        var updatedText = new SvgText { Id = text.Id, Attributes = updatedAttrs, Content = text.Content };
+        editorState.Document = editorState.Document.ReplaceElement(updatedText);
         editorState.NotifyStateChanged();
     }
 

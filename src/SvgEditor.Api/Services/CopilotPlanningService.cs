@@ -271,6 +271,24 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
                 }),
 
             AIFunctionFactory.Create(
+                ([Description("The element ID of the line or arrow path that the text should follow")] string lineElementId,
+                 [Description("The element ID of the text element to place on the line")] string textElementId) =>
+                {
+                    commands.Add(new PlaceTextOnLineCommand
+                    {
+                        LineElementId = lineElementId,
+                        TextElementId = textElementId,
+                    });
+                    return $"Placed text {textElementId} on line {lineElementId}";
+                },
+                new AIFunctionFactoryOptions
+                {
+                    Name = "place_text_on_line",
+                    Description = "Position a text element to follow the geometry of a line or arrow path. Use the line/arrow element as lineElementId and the text element as textElementId. Typically the first selected element is the line and the second is the text.",
+                    AdditionalProperties = skipPermission,
+                }),
+
+            AIFunctionFactory.Create(
                 () =>
                 {
                     return JsonSerializer.Serialize(new
@@ -325,7 +343,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             You are an SVG editor assistant. The user will describe edits they want to make to an SVG document.
             You MUST use the provided tools to execute the edits. Do NOT output raw SVG or code.
 
-            Available tools: set_fill, set_stroke, move_element, move_selection, align_selection, add_arrow_between_selection, get_selection, get_document_summary.
+            Available tools: set_fill, set_stroke, move_element, move_selection, align_selection, add_arrow_between_selection, place_text_on_line, get_selection, get_document_summary.
 
             Current document state:
             - Canvas size: {context.Canvas.Width}x{context.Canvas.Height}
@@ -342,6 +360,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             - Arrow anchor modes: use sourceAnchor/targetAnchor to control where the arrow connects. Options: 'border' (auto-detect closest edge, default), 'left', 'right', 'top', 'bottom' (midpoint of that edge), or 'center' (element center).
             - When the user says "from border to border", use sourceAnchor='border' and targetAnchor='border'.
             - When a target is to the right of the source, prefer sourceAnchor='right' and targetAnchor='left'. When the user explicitly names a side (e.g. "from the top"), use that side as the anchor.
+            - When the user asks to place text on a line or arrow (e.g. "align text with line", "put text on the arrow"), use place_text_on_line with the line/arrow element as lineElementId and the text element as textElementId. The first selected element is typically the line/arrow and the second is the text.
             - Call the tools first, then provide a brief summary of what you did.
             - Do not use any tools other than the ones listed above.
             """;
@@ -357,6 +376,7 @@ public sealed class CopilotPlanningService(ILogger<CopilotPlanningService> logge
             MoveSelectionCommand ms => $"Move selection by ({ms.Dx}, {ms.Dy})",
             AlignSelectionCommand a => $"Align selection {a.Alignment}",
             AddArrowBetweenSelectionCommand arr => $"Add arched arrow from {arr.SourceElementId} to {arr.TargetElementId}",
+            PlaceTextOnLineCommand ptol => $"Place text {ptol.TextElementId} on line {ptol.LineElementId}",
             _ => "Unknown command"
         });
         return string.Join(". ", parts) + ".";

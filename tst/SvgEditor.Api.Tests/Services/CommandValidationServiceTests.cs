@@ -527,4 +527,49 @@ public sealed class CommandValidationServiceTests
             Assert.IsEmpty(result.Issues);
         }
     }
+
+    [TestMethod]
+    public void Validate_ValidPlaceTextOnLineCommand_ReturnsValid()
+    {
+        var context = CreateContext("line-1", "text-1");
+        var commands = new List<SvgCommand>
+        {
+            new PlaceTextOnLineCommand { LineElementId = "line-1", TextElementId = "text-1" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsTrue(result.IsValid);
+        Assert.IsEmpty(result.Issues);
+    }
+
+    [TestMethod]
+    public void Validate_PlaceTextOnLine_UnknownLineElement_ReturnsInvalid()
+    {
+        var context = CreateContext("text-1");
+        var commands = new List<SvgCommand>
+        {
+            new PlaceTextOnLineCommand { LineElementId = "nonexistent", TextElementId = "text-1" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("not found")));
+    }
+
+    [TestMethod]
+    public void Validate_PlaceTextOnLine_SameLineAndText_ReturnsInvalid()
+    {
+        var context = CreateContext("elem-1");
+        var commands = new List<SvgCommand>
+        {
+            new PlaceTextOnLineCommand { LineElementId = "elem-1", TextElementId = "elem-1" }
+        };
+
+        var result = _sut.Validate(commands, context);
+
+        Assert.IsFalse(result.IsValid);
+        Assert.IsTrue(result.Issues.Any(i => i.Contains("different")));
+    }
 }

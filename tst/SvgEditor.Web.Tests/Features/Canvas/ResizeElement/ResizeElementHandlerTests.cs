@@ -154,4 +154,93 @@ public sealed class ResizeElementHandlerTests
         Assert.AreEqual(100, resized2.Width);
         Assert.AreEqual(100, resized2.Height);
     }
+
+    [TestMethod]
+    public async Task Handle_ResizeLine_UpdatesLinkedTextPath()
+    {
+        // Arrange: a line and a text that follows it (data-line-id links them)
+        var line = new SvgLine { Id = "l1", Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "50" } };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["data-line-id"] = "l1",
+                ["path"] = "M 0 0 L 100 50"
+            },
+            Content = "Label"
+        };
+        var state = CreateState(line, text);
+        state.SelectedElementIds = ["l1", "t1"];
+        var handler = new ResizeElementHandler(state);
+        var original = new BoundingBox(0, 0, 100, 50);
+        var updated = new BoundingBox(0, 0, 200, 100);
+
+        // Act
+        await handler.Handle(new ResizeElementCommand(state.SelectedElementIds, original, updated));
+
+        // Assert: line endpoints scaled
+        var resizedLine = (SvgLine)state.Document!.FindById("l1")!;
+        Assert.AreEqual(0, resizedLine.X1);
+        Assert.AreEqual(0, resizedLine.Y1);
+        Assert.AreEqual(200, resizedLine.X2);
+        Assert.AreEqual(100, resizedLine.Y2);
+
+        // Assert: text path attribute updated to match new line geometry
+        var resizedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.AreEqual("M 0 0 L 200 100", resizedText.Attributes["path"]);
+    }
+
+    [TestMethod]
+    public async Task Handle_ResizeLine_DoesNotUpdateUnlinkedText()
+    {
+        // Text without data-line-id should receive the generic positional resize
+        var line = new SvgLine { Id = "l1", Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100" } };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string> { ["x"] = "0", ["y"] = "0", ["font-size"] = "16" },
+            Content = "Hello"
+        };
+        var state = CreateState(line, text);
+        state.SelectedElementIds = ["l1", "t1"];
+        var handler = new ResizeElementHandler(state);
+        var original = new BoundingBox(0, 0, 100, 100);
+        var updated = new BoundingBox(0, 0, 200, 200);
+
+        await handler.Handle(new ResizeElementCommand(state.SelectedElementIds, original, updated));
+
+        // Text is NOT linked to the line, so generic resize applies (x,y remapped)
+        var resizedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.IsFalse(resizedText.Attributes.ContainsKey("path"));
+    }
+
+    [TestMethod]
+    public async Task Handle_ResizeLine_TextLinkedButNotSelected_PathNotUpdated()
+    {
+        // Text is linked to line but NOT in the resize selection — path must stay unchanged
+        var line = new SvgLine { Id = "l1", Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "50" } };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["data-line-id"] = "l1",
+                ["path"] = "M 0 0 L 100 50"
+            },
+            Content = "Label"
+        };
+        var state = CreateState(line, text);
+        // Only the line is selected, not the text
+        state.SelectedElementIds = ["l1"];
+        var handler = new ResizeElementHandler(state);
+        var original = new BoundingBox(0, 0, 100, 50);
+        var updated = new BoundingBox(0, 0, 200, 100);
+
+        await handler.Handle(new ResizeElementCommand(state.SelectedElementIds, original, updated));
+
+        // Text was not in the selection, so its path attribute is unchanged
+        var unchangedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.AreEqual("M 0 0 L 100 50", unchangedText.Attributes["path"]);
+    }
 }
