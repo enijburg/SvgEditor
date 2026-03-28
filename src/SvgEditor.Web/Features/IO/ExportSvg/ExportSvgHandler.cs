@@ -1,3 +1,5 @@
+using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 using SvgEditor.Web.Features.Canvas.Models;
 using SvgEditor.Web.Shared.Mediator;
@@ -38,7 +40,13 @@ public sealed class ExportSvgHandler : IRequestHandler<ExportSvgCommand, string>
 
         xDoc.Add(root);
 
-        return Task.FromResult(xDoc.ToString());
+        var sb = new StringBuilder();
+        using (var writer = XmlWriter.Create(sb, new XmlWriterSettings { Indent = true, IndentChars = "  ", OmitXmlDeclaration = true }))
+        {
+            xDoc.Save(writer);
+        }
+
+        return Task.FromResult(sb.ToString());
     }
 
     private static XNode ElementToXml(SvgElement element)

@@ -159,4 +159,25 @@ public sealed class ExportSvgHandlerTests
         Assert.IsInstanceOfType<SvgRect>(svgElements[0]);
         Assert.IsInstanceOfType<SvgCircle>(svgElements[1]);
     }
+
+    [TestMethod]
+    public async Task Handle_ProducesIndentedXml()
+    {
+        var doc = new SvgDocument
+        {
+            Attributes = new Dictionary<string, string> { ["viewBox"] = "0 0 100 100" },
+            Elements =
+            [
+                new SvgRect { Attributes = new Dictionary<string, string> { ["x"] = "0", ["y"] = "0", ["width"] = "100", ["height"] = "100" } }
+            ]
+        };
+
+        var svg = await Handler.Handle(new ExportSvgCommand(doc));
+        var lines = svg.Split('\n');
+
+        // The child element must be indented relative to the root
+        var rectLine = lines.FirstOrDefault(l => l.Contains("<rect"));
+        Assert.IsNotNull(rectLine, "Expected a <rect> line in the output");
+        Assert.IsTrue(rectLine.StartsWith("  ", StringComparison.Ordinal), "Child elements should be indented by 2 spaces");
+    }
 }
