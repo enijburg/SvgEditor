@@ -296,9 +296,9 @@ public sealed class ResizeElementHandlerTests
         var expectedAngle = Math.Atan2(resizedLine.Y2 - resizedLine.Y1, resizedLine.X2 - resizedLine.X1) * 180.0 / Math.PI;
         Assert.AreEqual(expectedAngle, actualAngle, 0.0001);
 
-        // The pivot coordinates (cx, cy) must be preserved unchanged
+        // The pivot coordinates (cx, cy) are remapped by the resize transform.
         Assert.AreEqual("0", parts[1].Trim());
-        Assert.AreEqual("-5", parts[2].Trim());
+        Assert.AreEqual("-10", parts[2].Trim());
     }
 
     [TestMethod]
@@ -328,5 +328,30 @@ public sealed class ResizeElementHandlerTests
         var resizedText = (SvgText)state.Document!.FindById("t1")!;
         Assert.AreEqual("M 0 0 L 100 200", resizedText.Attributes["path"]);
         Assert.IsFalse(resizedText.Attributes.ContainsKey("transform"));
+    }
+
+    [TestMethod]
+    public async Task Handle_ResizeLine_UpdatesLinkedTextTransformAngle_WithSpaceSeparatedRotateArguments()
+    {
+        var line = new SvgLine { Id = "l1", Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100" } };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["data-line-id"] = "l1",
+                ["path"] = "M 0 0 L 100 100",
+                ["transform"] = "rotate(45 10 20)"
+            },
+            Content = "Label"
+        };
+        var state = CreateState(line, text);
+        state.SelectedElementIds = ["l1", "t1"];
+        var handler = new ResizeElementHandler(state);
+
+        await handler.Handle(new ResizeElementCommand(state.SelectedElementIds, new BoundingBox(0, 0, 100, 100), new BoundingBox(0, 0, 100, 200)));
+
+        var resizedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.AreEqual("rotate(63.43494882292201,10,40)", resizedText.Attributes["transform"]);
     }
 }
