@@ -1,0 +1,64 @@
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    padding: 0.8rem 1rem;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.88) 100%);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.toolbar-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 2rem;
+    background: rgba(148, 163, 184, 0.35);
+}
+
+.tool-btn {
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.95rem;
+    color: #f8fafc;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 100ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+.tool-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+}
+
+.tool-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tool-icon {
+    font-size: 0.95rem;
+}
+
+.tool-btn-primary {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    box-shadow: 0 10px 20px rgba(14, 165, 233, 0.28);
+}
+
+.tool-btn-success {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    box-shadow: 0 10px 20px rgba(22, 163, 74, 0.25);
+}
+
+.tool-btn-muted {
+    background: rgba(71, 85, 105, 0.92);
+    border-color: rgba(148, 163, 184, 0.38);
+}
