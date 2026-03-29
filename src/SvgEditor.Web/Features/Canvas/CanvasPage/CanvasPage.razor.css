@@ -1,39 +1,52 @@
 .canvas-page {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
+    height: calc(100vh - 6.6rem);
+    min-height: 34rem;
+    background: rgba(15, 23, 42, 0.58);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 1rem;
+    overflow: hidden;
 }
 
 .toolbar {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    flex-shrink: 0;
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.82) 0%, rgba(15, 23, 42, 0.82) 100%);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.24);
 }
 
 .toolbar-divider {
     width: 1px;
-    height: 1.5rem;
-    background: #dee2e6;
+    height: 1.6rem;
+    background: rgba(148, 163, 184, 0.35);
     margin: 0 0.25rem;
 }
 
 .canvas-area {
-    flex: 1;
     overflow: auto;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    background: #e9ecef;
+    background:
+        linear-gradient(45deg, rgba(148, 163, 184, 0.12) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(148, 163, 184, 0.12) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, 0.12) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, 0.12) 75%),
+        #0b1220;
+    background-size: 24px 24px;
+    background-position: 0 0, 0 12px, 12px -12px, -12px 0;
     padding: 1rem;
 }
 
 #canvas-svg {
-    background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    background: #ffffff;
+    border-radius: 0.65rem;
+    box-shadow: 0 24px 45px rgba(2, 6, 23, 0.5);
     cursor: default;
     max-width: 100%;
 }
@@ -45,10 +58,25 @@
     justify-content: center;
     width: 100%;
     padding: 4rem;
-    color: #6c757d;
+    color: #94a3b8;
     text-align: center;
 }
 
-:global(.selected) {
-    outline: none;
+:global(.fill-label) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #cbd5e1;
+    background: rgba(51, 65, 85, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 0.55rem;
+    padding: 0.3rem 0.5rem;
+}
+
+:global(.fill-label input[type="color"]) {
+    width: 1.8rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    background: transparent;
 }

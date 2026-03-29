@@ -1,12 +1,22 @@
 ﻿@inherits LayoutComponentBase
 <div class="page">
-    <div class="sidebar">
+    <aside class="sidebar">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+    <div class="main-panel">
+        <header class="app-header">
+            <div>
+                <p class="app-header-eyebrow">SVG Workspace</p>
+                <h1>Vector Editor</h1>
+            </div>
+            <span class="app-header-status">Ready</span>
+        </header>
+
+        <main>
+            <article class="content">
+                @Body
+            </article>
+        </main>
+    </div>
 </div>

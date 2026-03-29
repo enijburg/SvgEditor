@@ -1,17 +1,24 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">SVG Editor</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+﻿<div class="top-row">
+    <div class="brand-block">
+        <span class="brand-icon">✒️</span>
+        <div>
+            <a class="navbar-brand" href="">SVG Editor</a>
+            <p class="brand-subtitle">Create, edit, and export fast</p>
+        </div>
     </div>
+
+    <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
 </div>
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
-        <div class="nav-item px-3">
+        <p class="nav-section-title">Workspace</p>
+        <div class="nav-item px-2">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-pencil-square" aria-hidden="true"></span> Canvas
+                <span class="bi bi-pencil-square" aria-hidden="true"></span>
+                <span>Canvas</span>
             </NavLink>
         </div>
     </nav>
