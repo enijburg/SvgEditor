@@ -392,11 +392,35 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
         // For straight-line arrows, set a rotation transform so the text appears at the same
         // angle as the line.  The pivot point is the text's own anchor position so that
         // subsequent resize operations can update the angle while keeping the pivot stable.
+        // Compute a rotation so the text appears along the line direction. Keep the text upright
+        // by clamping the angle to the [-90, 90] range (add/subtract 180 when necessary).
+        double angleDeg = 0;
+        bool haveAngle = false;
+
         if (lineElement is SvgLine svgLine)
         {
+            angleDeg = Math.Atan2(svgLine.Y2 - svgLine.Y1, svgLine.X2 - svgLine.X1) * 180.0 / Math.PI;
+            haveAngle = true;
+        }
+        else if (lineElement is SvgPath svgPath && !string.IsNullOrWhiteSpace(svgPath.D))
+        {
+            // Extract first and last coordinate pairs from the path data to compute a direction.
+            if (SvgElement.TryExtractPathEndpoints(svgPath.D, out var sx, out var sy, out var ex, out var ey))
+            {
+                angleDeg = Math.Atan2(ey - sy, ex - sx) * 180.0 / Math.PI;
+                haveAngle = true;
+            }
+        }
+
+        if (haveAngle)
+        {
+            // Keep text readable: if the angle points more than 90 degrees away from horizontal,
+            // rotate by an additional 180 degrees to keep it upright instead of upside-down.
+            if (angleDeg > 90) angleDeg -= 180;
+            else if (angleDeg < -90) angleDeg += 180;
+
             var inv = System.Globalization.CultureInfo.InvariantCulture;
-            var angle = Math.Atan2(svgLine.Y2 - svgLine.Y1, svgLine.X2 - svgLine.X1) * 180.0 / Math.PI;
-            updatedAttrs["transform"] = $"rotate({angle.ToString(inv)},{text.X.ToString(inv)},{text.Y.ToString(inv)})";
+            updatedAttrs["transform"] = $"rotate({angleDeg.ToString(inv)},{text.X.ToString(inv)},{text.Y.ToString(inv)})";
         }
 
         var updatedText = new SvgText { Id = text.Id, Attributes = updatedAttrs, Content = text.Content };
