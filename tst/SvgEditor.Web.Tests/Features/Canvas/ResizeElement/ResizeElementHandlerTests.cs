@@ -243,4 +243,90 @@ public sealed class ResizeElementHandlerTests
         var unchangedText = (SvgText)state.Document!.FindById("t1")!;
         Assert.AreEqual("M 0 0 L 100 50", unchangedText.Attributes["path"]);
     }
+
+    [TestMethod]
+    public async Task Handle_ResizeLine_UpdatesLinkedTextTransformAngle()
+    {
+        // Arrange: a 45-degree arrow (line from (0,0) to (100,100)) with text aligned along it.
+        // The text has transform="rotate(45, 0, -5)" matching the original 45-degree slope.
+        var line = new SvgLine { Id = "l1", Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100" } };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["data-line-id"] = "l1",
+                ["path"] = "M 0 0 L 100 100",
+                ["x"] = "0",
+                ["y"] = "-5",
+                ["transform"] = "rotate(45,0,-5)"
+            },
+            Content = "Label"
+        };
+        var state = CreateState(line, text);
+        state.SelectedElementIds = ["l1", "t1"];
+        var handler = new ResizeElementHandler(state);
+
+        // Resize height only: selection goes from (0,0,100,100) to (0,0,100,200).
+        // The line's Y2 doubles from 100 to 200, changing the slope from 45° to ~63.43°.
+        var original = new BoundingBox(0, 0, 100, 100);
+        var updated = new BoundingBox(0, 0, 100, 200);
+
+        await handler.Handle(new ResizeElementCommand(state.SelectedElementIds, original, updated));
+
+        // Assert: line has new geometry
+        var resizedLine = (SvgLine)state.Document!.FindById("l1")!;
+        Assert.AreEqual(0, resizedLine.X1);
+        Assert.AreEqual(0, resizedLine.Y1);
+        Assert.AreEqual(100, resizedLine.X2);
+        Assert.AreEqual(200, resizedLine.Y2);
+
+        // Assert: text transform angle matches the new line slope
+        var resizedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.IsTrue(resizedText.Attributes.ContainsKey("transform"));
+
+        var transform = resizedText.Attributes["transform"];
+        Assert.IsTrue(transform.StartsWith("rotate(", StringComparison.Ordinal));
+
+        // Parse the angle from "rotate(angle,cx,cy)"
+        var inner = transform["rotate(".Length..^1];
+        var parts = inner.Split(',');
+        var actualAngle = double.Parse(parts[0].Trim(), System.Globalization.CultureInfo.InvariantCulture);
+
+        var expectedAngle = Math.Atan2(resizedLine.Y2 - resizedLine.Y1, resizedLine.X2 - resizedLine.X1) * 180.0 / Math.PI;
+        Assert.AreEqual(expectedAngle, actualAngle, 0.0001);
+
+        // The pivot coordinates (cx, cy) must be preserved unchanged
+        Assert.AreEqual("0", parts[1].Trim());
+        Assert.AreEqual("-5", parts[2].Trim());
+    }
+
+    [TestMethod]
+    public async Task Handle_ResizeLine_LinkedTextWithoutTransform_PathUpdatedAngleUnchanged()
+    {
+        // When the text has no transform attribute, the resize should still update the path
+        // but must not introduce a new transform attribute.
+        var line = new SvgLine { Id = "l1", Attributes = new Dictionary<string, string> { ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100" } };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["data-line-id"] = "l1",
+                ["path"] = "M 0 0 L 100 100"
+            },
+            Content = "Label"
+        };
+        var state = CreateState(line, text);
+        state.SelectedElementIds = ["l1", "t1"];
+        var handler = new ResizeElementHandler(state);
+        var original = new BoundingBox(0, 0, 100, 100);
+        var updated = new BoundingBox(0, 0, 100, 200);
+
+        await handler.Handle(new ResizeElementCommand(state.SelectedElementIds, original, updated));
+
+        var resizedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.AreEqual("M 0 0 L 100 200", resizedText.Attributes["path"]);
+        Assert.IsFalse(resizedText.Attributes.ContainsKey("transform"));
+    }
 }

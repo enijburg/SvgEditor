@@ -389,6 +389,16 @@ public sealed class CopilotCommandApplier(IMediator mediator, EditorState editor
             ["path"] = pathData
         };
 
+        // For straight-line arrows, set a rotation transform so the text appears at the same
+        // angle as the line.  The pivot point is the text's own anchor position so that
+        // subsequent resize operations can update the angle while keeping the pivot stable.
+        if (lineElement is SvgLine svgLine)
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var angle = Math.Atan2(svgLine.Y2 - svgLine.Y1, svgLine.X2 - svgLine.X1) * 180.0 / Math.PI;
+            updatedAttrs["transform"] = $"rotate({angle.ToString(inv)},{text.X.ToString(inv)},{text.Y.ToString(inv)})";
+        }
+
         var updatedText = new SvgText { Id = text.Id, Attributes = updatedAttrs, Content = text.Content };
         editorState.Document = editorState.Document.ReplaceElement(updatedText);
         editorState.NotifyStateChanged();

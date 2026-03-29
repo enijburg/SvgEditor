@@ -665,4 +665,89 @@ public sealed class CopilotCommandApplierTests
         Assert.IsFalse(unchangedText.Attributes.ContainsKey("data-line-id"));
         Assert.IsFalse(unchangedText.Attributes.ContainsKey("path"));
     }
+
+    [TestMethod]
+    public async Task PlaceTextOnLine_WithSvgLine_SetsRotationTransformMatchingLineAngle()
+    {
+        // Arrange: a 45-degree arrow (line from (0,0) to (100,100)) and text positioned
+        // a couple of pixels above the line start.
+        var line = new SvgLine
+        {
+            Id = "l1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["x1"] = "0", ["y1"] = "0", ["x2"] = "100", ["y2"] = "100"
+            }
+        };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string> { ["x"] = "0", ["y"] = "-5" },
+            Content = "Arrow label"
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [line, text] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand { Type = "PlaceTextOnLine", LineElementId = "l1", TextElementId = "t1" }
+        ], "align text along 45-degree arrow");
+
+        var updatedText = (SvgText)state.Document!.FindById("t1")!;
+
+        // The transform attribute must encode the line's angle
+        Assert.IsTrue(updatedText.Attributes.ContainsKey("transform"));
+        var transform = updatedText.Attributes["transform"];
+        Assert.IsTrue(transform.StartsWith("rotate(", StringComparison.Ordinal));
+
+        var inner = transform["rotate(".Length..^1];
+        var parts = inner.Split(',');
+        var actualAngle = double.Parse(parts[0].Trim(), System.Globalization.CultureInfo.InvariantCulture);
+        var expectedAngle = Math.Atan2(100 - 0, 100 - 0) * 180.0 / Math.PI; // 45 degrees
+        Assert.AreEqual(expectedAngle, actualAngle, 0.0001);
+
+        // Pivot must be the text's own anchor position (0, -5)
+        Assert.HasCount(3, parts);
+        Assert.AreEqual("0", parts[1].Trim());
+        Assert.AreEqual("-5", parts[2].Trim());
+    }
+
+    [TestMethod]
+    public async Task PlaceTextOnLine_WithSvgPath_DoesNotSetTransform()
+    {
+        // SvgPath arrows use arbitrary curves — no rotation transform is added for them.
+        var arrow = new SvgPath
+        {
+            Id = "p1",
+            Attributes = new Dictionary<string, string>
+            {
+                ["d"] = "M 50 110 Q 225 30 300 200",
+                ["fill"] = "none",
+                ["stroke"] = "#333333"
+            }
+        };
+        var text = new SvgText
+        {
+            Id = "t1",
+            Attributes = new Dictionary<string, string> { ["x"] = "0", ["y"] = "0" },
+            Content = "Arrow label"
+        };
+        var state = new EditorState
+        {
+            Document = new SvgDocument { Width = 800, Height = 600, Elements = [arrow, text] }
+        };
+        var applier = new CopilotCommandApplier(new StubMediator(), state);
+
+        await applier.ApplyCommandsAsync(
+        [
+            new CopilotCommand { Type = "PlaceTextOnLine", LineElementId = "p1", TextElementId = "t1" }
+        ], "place text on arrow path");
+
+        var updatedText = (SvgText)state.Document!.FindById("t1")!;
+        Assert.AreEqual("p1", updatedText.Attributes["data-line-id"]);
+        Assert.IsFalse(updatedText.Attributes.ContainsKey("transform"));
+    }
 }
