@@ -12,19 +12,30 @@
 @inject Microsoft.JSInterop.IJSRuntime JSRuntime
 
 <div class="toolbar">
-    <button class="btn btn-sm btn-primary" @onclick="OpenFile" title="Open SVG file">
-        📂 Open
-    </button>
-    <button class="btn btn-sm btn-success" @onclick="SaveFile" disabled="@(EditorState.Document is null)" title="Export SVG">
-        💾 Save
-    </button>
-    <span class="toolbar-divider"></span>
-    <button class="btn btn-sm btn-secondary" @onclick="Undo" disabled="@(!HistoryStack.CanUndo)" title="Undo">
-        ↩ Undo
-    </button>
-    <button class="btn btn-sm btn-secondary" @onclick="Redo" disabled="@(!HistoryStack.CanRedo)" title="Redo">
-        ↪ Redo
-    </button>
+    <div class="toolbar-group">
+        <button class="tool-btn tool-btn-primary" @onclick="OpenFile" title="Open SVG file">
+            <span class="tool-icon" aria-hidden="true">📂</span>
+            <span>Open</span>
+        </button>
+        <button class="tool-btn tool-btn-success" @onclick="SaveFile" disabled="@(EditorState.Document is null)" title="Export SVG">
+            <span class="tool-icon" aria-hidden="true">💾</span>
+            <span>Save</span>
+        </button>
+    </div>
+
+    <span class="toolbar-divider" aria-hidden="true"></span>
+
+    <div class="toolbar-group">
+        <button class="tool-btn tool-btn-muted" @onclick="Undo" disabled="@(!HistoryStack.CanUndo)" title="Undo">
+            <span class="tool-icon" aria-hidden="true">↩</span>
+            <span>Undo</span>
+        </button>
+        <button class="tool-btn tool-btn-muted" @onclick="Redo" disabled="@(!HistoryStack.CanRedo)" title="Redo">
+            <span class="tool-icon" aria-hidden="true">↪</span>
+            <span>Redo</span>
+        </button>
+    </div>
+
     <StylePanel />
 </div>
 
